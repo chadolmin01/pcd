@@ -97,6 +97,56 @@ npm run dev
 └── tailwind.config.ts
 ```
 
+## Vercel 배포 가이드
+
+### 방법 1: GitHub 연동 (권장)
+
+1. [Vercel](https://vercel.com)에 로그인
+2. **Add New Project** 클릭
+3. GitHub 저장소 `chadolmin01/pcd` 선택
+4. **Environment Variables** 설정:
+   - `GEMINI_API_KEY`: Gemini API 키 입력
+5. **Deploy** 클릭
+
+### 방법 2: Vercel CLI
+
+```bash
+# Vercel CLI 설치
+npm i -g vercel
+
+# 프로젝트 디렉토리에서 배포
+cd prd-generator
+vercel --prod
+
+# 환경 변수 추가
+vercel env add GEMINI_API_KEY production
+# API 키 입력 후 Enter
+
+# 환경 변수 적용을 위해 재배포
+vercel --prod
+```
+
+### 환경 변수
+
+| 변수명 | 필수 | 설명 |
+|--------|------|------|
+| `GEMINI_API_KEY` | ✅ | Google Gemini API 키 |
+
+### 자동 배포
+
+GitHub 저장소와 연결하면 `main` 브랜치에 푸시할 때마다 자동으로 배포됩니다.
+
+```bash
+git add .
+git commit -m "Update feature"
+git push origin main
+# → Vercel이 자동으로 빌드 및 배포
+```
+
+## 라이브 데모
+
+🔗 **https://prd-generator-ochre.vercel.app**
+
 ## 라이선스
 
 MIT License
