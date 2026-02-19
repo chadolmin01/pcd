@@ -612,6 +612,26 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         {!hideInput && !isLimitReached && (
           <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
             <div className="max-w-4xl mx-auto relative">
+              {/* Completion CTA - shown after first response */}
+              {metrics && (
+                <div className="flex items-center justify-between mb-3 p-3 bg-gray-50 border border-gray-200 rounded-sm">
+                  <div className="flex items-center gap-3">
+                    <div className="text-sm">
+                      <span className="text-gray-500">현재 점수: </span>
+                      <span className="font-bold text-gray-900">{metrics.score}점</span>
+                    </div>
+                    <span className="text-[10px] text-gray-400">|</span>
+                    <span className="text-[10px] text-gray-400">추가 질문으로 점수를 높이거나, 검증을 완료하세요</span>
+                  </div>
+                  <button
+                    onClick={handleFinish}
+                    className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  >
+                    검증 완료
+                    <ArrowRight size={14} />
+                  </button>
+                </div>
+              )}
               <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
                 <input
                   type="text"
