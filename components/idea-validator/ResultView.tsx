@@ -5,6 +5,7 @@ import { Download, Share2, Briefcase, FileText, Layout, Cpu, Paintbrush, DollarS
 import { Artifacts, PrdStructure, JdStructure } from './types';
 import { generateFinalArtifacts } from './geminiService';
 import { validationResultsStore } from '@/src/lib/validationResultsStore';
+import DecisionProfileCard from './DecisionProfileCard';
 
 // Recommended event type
 interface RecommendedEvent {
@@ -656,6 +657,9 @@ const ResultView: React.FC<ResultViewProps> = ({ conversationHistory, originalId
                 icon={<DollarSign size={16} className="text-emerald-500" />}
               />
            </div>
+
+           {/* Founder Type Card */}
+           <DecisionProfileCard compact />
 
            {/* Coming Soon Teaser Card */}
            <div className="bg-gradient-to-br from-gray-900 to-gray-800 border border-gray-700 rounded-sm p-6 shadow-lg overflow-hidden relative">
