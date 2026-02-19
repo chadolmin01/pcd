@@ -63,9 +63,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   const [reflectionText, setReflectionText] = useState('');
 
   // Token System State
-  const FREE_TURNS = 5;
+  const FREE_TURNS = 10;
   const [turnCount, setTurnCount] = useState(0);
   const [tokens, setTokens] = useState(30);
+  const [showInputMode, setShowInputMode] = useState(true); // 입력창 vs 결과 미리보기
 
   // Tutorial
   const tutorial = useTutorialSafe();
@@ -144,6 +145,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       // Update Metrics
       if (analysisResult.metrics) {
         setMetrics(analysisResult.metrics);
+        setShowInputMode(false); // Switch to results preview mode
       }
 
       // 아이디어 카테고리 저장
@@ -608,55 +610,151 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
           </div>
         )}
 
-        {/* Regular Input Area - only shown when not in special states and hideInput is false */}
+        {/* Bottom Area - Input or Results Preview */}
         {!hideInput && !isLimitReached && (
           <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
             <div className="max-w-4xl mx-auto relative">
-              {/* Completion CTA - shown after first response */}
-              {metrics && (
-                <div className="flex items-center justify-between mb-3 p-3 bg-gray-50 border border-gray-200 rounded-sm">
-                  <div className="flex items-center gap-3">
-                    <div className="text-sm">
-                      <span className="text-gray-500">현재 점수: </span>
-                      <span className="font-bold text-gray-900">{metrics.score}점</span>
-                    </div>
-                    <span className="text-[10px] text-gray-400">|</span>
-                    <span className="text-[10px] text-gray-400">추가 질문으로 점수를 높이거나, 검증을 완료하세요</span>
+              {/* No metrics yet - show normal input */}
+              {!metrics && (
+                <>
+                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
+                    <input
+                      type="text"
+                      className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
+                      placeholder="아이디어나 답변을 입력하세요..."
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                      disabled={isTyping}
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={isTyping || !input.trim()}
+                      className={`p-2 rounded-sm transition-colors
+                        ${input.trim() && !isTyping
+                          ? 'bg-black text-white hover:bg-gray-800'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
+                      `}
+                    >
+                      <Send size={16} />
+                    </button>
                   </div>
-                  <button
-                    onClick={handleFinish}
-                    className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
-                  >
-                    검증 완료
-                    <ArrowRight size={14} />
-                  </button>
+                  <p className="text-center text-[10px] text-gray-400 mt-2 font-mono">
+                    Draft AI can make mistakes. Consider checking important information.
+                  </p>
+                </>
+              )}
+
+              {/* Has metrics - show results preview or input */}
+              {metrics && !showInputMode && (
+                <div className="bg-gray-50 border border-gray-200 rounded-sm p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-black text-gray-900">{metrics.score}</div>
+                        <div className="text-[10px] text-gray-400 font-mono uppercase">점수</div>
+                      </div>
+                      <div className="h-10 w-px bg-gray-200" />
+                      <div className="text-sm text-gray-600">
+                        <span className="font-medium">{turnCount}/10</span> 턴 사용
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setShowInputMode(true)}
+                        className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded-sm hover:bg-gray-100 transition-colors"
+                      >
+                        계속 대화하기
+                      </button>
+                      <button
+                        onClick={handleFinish}
+                        className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
+                      >
+                        검증 완료
+                        <ArrowRight size={14} />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div className="bg-white border border-gray-100 rounded-sm p-3 text-center">
+                      <div className="text-lg font-bold text-indigo-600">{metrics.developerScore}</div>
+                      <div className="text-[10px] text-gray-400">기술</div>
+                    </div>
+                    <div className="bg-white border border-gray-100 rounded-sm p-3 text-center">
+                      <div className="text-lg font-bold text-pink-600">{metrics.designerScore}</div>
+                      <div className="text-[10px] text-gray-400">디자인</div>
+                    </div>
+                    <div className="bg-white border border-gray-100 rounded-sm p-3 text-center">
+                      <div className="text-lg font-bold text-emerald-600">{metrics.vcScore}</div>
+                      <div className="text-[10px] text-gray-400">비즈니스</div>
+                    </div>
+                  </div>
                 </div>
               )}
-              <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
-                <input
-                  type="text"
-                  className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
-                  placeholder="아이디어나 답변을 입력하세요..."
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                  disabled={isTyping}
-                />
+
+              {/* Has metrics but input mode - show input with CTA */}
+              {metrics && showInputMode && (
+                <>
+                  <div className="flex items-center justify-between mb-3 p-3 bg-gray-50 border border-gray-200 rounded-sm">
+                    <div className="flex items-center gap-3">
+                      <div className="text-sm">
+                        <span className="text-gray-500">현재 점수: </span>
+                        <span className="font-bold text-gray-900">{metrics.score}점</span>
+                      </div>
+                      <span className="text-[10px] text-gray-400">|</span>
+                      <span className="text-[10px] text-gray-400">{turnCount}/10 턴</span>
+                    </div>
+                    <button
+                      onClick={handleFinish}
+                      className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
+                    >
+                      검증 완료
+                      <ArrowRight size={14} />
+                    </button>
+                  </div>
+                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
+                    <input
+                      type="text"
+                      className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
+                      placeholder="추가 질문이나 답변을 입력하세요..."
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
+                      disabled={isTyping}
+                    />
+                    <button
+                      onClick={handleSend}
+                      disabled={isTyping || !input.trim()}
+                      className={`p-2 rounded-sm transition-colors
+                        ${input.trim() && !isTyping
+                          ? 'bg-black text-white hover:bg-gray-800'
+                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
+                      `}
+                    >
+                      <Send size={16} />
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Auto-complete when limit reached */}
+        {isLimitReached && metrics && (
+          <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
+            <div className="max-w-4xl mx-auto">
+              <div className="bg-black text-white rounded-sm p-5 text-center">
+                <div className="text-2xl font-black mb-2">{metrics.score}점</div>
+                <p className="text-sm text-gray-300 mb-4">10턴 검증이 완료되었습니다</p>
                 <button
-                  onClick={handleSend}
-                  disabled={isTyping || !input.trim()}
-                  className={`p-2 rounded-sm transition-colors
-                    ${input.trim() && !isTyping
-                      ? 'bg-black text-white hover:bg-gray-800'
-                      : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
-                  `}
+                  onClick={handleFinish}
+                  className="px-6 py-3 bg-white text-black text-sm font-bold rounded-sm hover:bg-gray-100 transition-colors flex items-center gap-2 mx-auto"
                 >
-                  <Send size={16} />
+                  결과 확인하기
+                  <ArrowRight size={16} />
                 </button>
               </div>
-              <p className="text-center text-[10px] text-gray-400 mt-2 font-mono">
-                Draft AI can make mistakes. Consider checking important information.
-              </p>
             </div>
           </div>
         )}
