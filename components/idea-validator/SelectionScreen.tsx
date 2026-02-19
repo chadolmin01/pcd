@@ -42,7 +42,7 @@ const SelectionCard = memo(({
 }) => (
   <button
     onClick={onClick}
-    className={`group relative flex flex-col items-start p-6 h-full w-full border transition-all duration-200 text-left rounded-sm
+    className={`group relative flex flex-col items-start p-6 h-full w-full border transition-all duration-200 text-left rounded
       ${variant === 'ai'
         ? 'bg-white border-gray-200 hover:border-black hover:shadow-sm'
         : 'bg-white border-gray-200 hover:border-black hover:shadow-sm'
@@ -50,7 +50,7 @@ const SelectionCard = memo(({
     `}
   >
     {tag && (
-      <div className={`absolute top-5 right-5 text-[9px] font-mono font-bold px-2 py-0.5 uppercase tracking-wider border rounded-sm
+      <div className={`absolute top-5 right-5 text-[9px] font-mono font-bold px-2 py-0.5 uppercase tracking-wider border rounded
         ${variant === 'ai'
           ? 'bg-draft-blue/10 text-draft-blue border-draft-blue/20'
           : 'bg-gray-50 text-gray-500 border-gray-200'
@@ -59,7 +59,7 @@ const SelectionCard = memo(({
       </div>
     )}
 
-    <div className={`mb-5 p-2.5 rounded-sm border
+    <div className={`mb-5 p-2.5 rounded border
       ${variant === 'ai'
         ? 'bg-gray-50 border-gray-100 text-gray-900 group-hover:bg-black group-hover:text-white group-hover:border-black transition-colors'
         : 'bg-gray-50 border-gray-100 text-gray-900 group-hover:bg-black group-hover:text-white group-hover:border-black transition-colors'
@@ -99,7 +99,7 @@ const PersonaCard = memo(({
 }) => (
   <button
     onClick={onClick}
-    className={`group relative flex flex-col items-start p-4 w-full h-[120px] bg-white border transition-all duration-200 text-left rounded-sm hover:shadow-sm
+    className={`group relative flex flex-col items-start p-4 w-full h-[120px] bg-white border transition-all duration-200 text-left rounded hover:shadow-sm
       ${isSelected
         ? 'bg-gray-50 border-black shadow-sm'
         : 'border-gray-200 hover:border-black'
@@ -113,7 +113,7 @@ const PersonaCard = memo(({
     )}
 
     <div className="w-full flex items-start gap-3 h-full">
-      <div className={`p-2 border rounded-sm transition-colors shrink-0 ${isSelected ? 'bg-gray-800 border-gray-800 text-white' : persona.color}`}>
+      <div className={`p-2 border rounded transition-colors shrink-0 ${isSelected ? 'bg-gray-800 border-gray-800 text-white' : persona.color}`}>
         {getPersonaIcon(persona.icon, 18)}
       </div>
       <div className="flex-1 min-w-0 flex flex-col">
@@ -151,14 +151,14 @@ const PersonaDetailModal = memo(({
     onClick={onClose}
   >
     <div
-      className="bg-white rounded-sm max-w-md w-full shadow-xl border border-gray-200 animate-in zoom-in-95 duration-200"
+      className="bg-white rounded max-w-md w-full shadow-xl border border-gray-200 animate-in zoom-in-95 duration-200"
       onClick={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div className="p-6 border-b border-gray-100">
         <div className="flex items-start justify-between">
           <div className="flex items-center gap-4">
-            <div className={`p-3 rounded-sm border ${persona.color}`}>
+            <div className={`p-3 rounded border ${persona.color}`}>
               {getPersonaIcon(persona.icon, 28)}
             </div>
             <div>
@@ -168,7 +168,7 @@ const PersonaDetailModal = memo(({
           </div>
           <button
             onClick={onClose}
-            className="p-2 hover:bg-gray-100 rounded-sm transition-colors"
+            className="p-2 hover:bg-gray-100 rounded transition-colors"
           >
             <X size={18} className="text-gray-400" />
           </button>
@@ -189,7 +189,7 @@ const PersonaDetailModal = memo(({
             {persona.checkPoints.map((point, idx) => (
               <span
                 key={idx}
-                className="px-2.5 py-1 rounded-sm text-xs font-medium border border-gray-200 text-gray-600 bg-gray-50"
+                className="px-2.5 py-1 rounded text-xs font-medium border border-gray-200 text-gray-600 bg-gray-50"
               >
                 {point}
               </span>
@@ -210,7 +210,7 @@ const PersonaDetailModal = memo(({
             </div>
             <button
               onClick={() => { onDeselect(); onClose(); }}
-              className="px-5 py-2.5 border border-gray-200 text-gray-500 rounded-sm font-medium text-sm hover:bg-white hover:border-gray-300 transition-all"
+              className="px-5 py-2.5 border border-gray-200 text-gray-500 rounded font-medium text-sm hover:bg-white hover:border-gray-300 transition-all"
             >
               선택 해제
             </button>
@@ -223,7 +223,7 @@ const PersonaDetailModal = memo(({
             <button
               onClick={() => { onSelect(); onClose(); }}
               disabled={!canSelect}
-              className={`px-5 py-2.5 rounded-sm font-medium text-sm transition-all flex items-center gap-2
+              className={`px-5 py-2.5 rounded font-medium text-sm transition-all flex items-center gap-2
                 ${canSelect
                   ? 'bg-black text-white hover:bg-gray-800'
                   : 'bg-gray-200 text-gray-400 cursor-not-allowed'
@@ -286,30 +286,30 @@ const LevelCard = memo(({
     <button
       onClick={onSelect}
       disabled={isLocked || isExhausted}
-      className={`group relative flex flex-col items-start p-5 w-full h-full bg-white border transition-all duration-200 text-left rounded-sm
+      className={`group relative flex flex-col items-start p-5 w-full h-full bg-white border transition-all duration-200 text-left rounded
         ${isLocked || isExhausted ? 'opacity-60 cursor-not-allowed' : 'hover:shadow-sm ' + currentTheme.border}
         ${recommended ? 'border-black ring-1 ring-black' : 'border-gray-200'}`}
     >
       {recommended && !isLocked && !isExhausted && (
-        <div className="absolute -top-2.5 left-5 bg-black text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider font-mono rounded-sm">
+        <div className="absolute -top-2.5 left-5 bg-black text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider font-mono rounded">
           Recommended
         </div>
       )}
 
       {isLocked && (
-        <div className="absolute -top-2.5 left-5 bg-gray-500 text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider font-mono rounded-sm flex items-center gap-1">
+        <div className="absolute -top-2.5 left-5 bg-gray-500 text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider font-mono rounded flex items-center gap-1">
           <Lock size={10} /> Locked
         </div>
       )}
 
       {isExhausted && (
-        <div className="absolute -top-2.5 left-5 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider font-mono rounded-sm">
+        <div className="absolute -top-2.5 left-5 bg-red-500 text-white text-[9px] font-bold px-2 py-0.5 uppercase tracking-wider font-mono rounded">
           오늘 소진
         </div>
       )}
 
       <div className="w-full flex justify-between items-start mb-4">
-        <div className={`p-2 border rounded-sm transition-colors ${currentTheme.iconBg}`}>
+        <div className={`p-2 border rounded transition-colors ${currentTheme.iconBg}`}>
           {icon}
         </div>
         {isLocked ? (
@@ -357,7 +357,7 @@ const SelectedPersonasSummary = memo(({ selectedPersonas }: { selectedPersonas: 
         const persona = PERSONA_PRESETS.find(p => p.id === pId);
         if (!persona) return null;
         return (
-          <div key={pId} className="flex items-center gap-1 px-2 py-1 bg-gray-800 text-white rounded-sm text-[10px] font-bold">
+          <div key={pId} className="flex items-center gap-1 px-2 py-1 bg-gray-800 text-white rounded text-[10px] font-bold">
             {getPersonaIcon(persona.icon, 12)}
             <span>{persona.nameKo}</span>
           </div>
@@ -411,7 +411,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
             <div className="flex flex-col lg:grid lg:grid-cols-12 gap-8 lg:gap-10 items-center">
               {/* Left Text Area */}
               <div className="w-full lg:col-span-5 space-y-6 lg:space-y-8 text-center lg:text-left">
-                <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white border border-gray-200 rounded-sm">
+                <div className="inline-flex items-center gap-2 px-2.5 py-1 bg-white border border-gray-200 rounded">
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
                   <span className="text-[9px] font-mono font-bold text-gray-500 uppercase tracking-widest">System Operational</span>
                 </div>
@@ -511,7 +511,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
               <button
                 onClick={() => setStep('level')}
                 disabled={selectedPersonas.length !== 3}
-                className={`px-8 py-3 rounded-sm font-bold text-sm flex items-center gap-2 transition-all
+                className={`px-8 py-3 rounded font-bold text-sm flex items-center gap-2 transition-all
                   ${selectedPersonas.length === 3
                     ? 'bg-black text-white hover:bg-gray-800'
                     : 'bg-gray-200 text-gray-400 cursor-not-allowed'

@@ -371,3 +371,90 @@ export function checkLevelEligibility(
     failingCategories
   };
 }
+
+// ============================================
+// Business Plan Synthesis (종합 결과물)
+// ============================================
+
+export interface BusinessPlanBasicInfo {
+  itemName: string;           // 아이템명
+  oneLiner: string;           // 한 줄 설명
+  targetCustomer: string;     // 타겟 고객
+  industry: string;           // 산업 분류
+  fundingAmount?: number;     // 신청 금액 (선택)
+  templateType?: string;      // 템플릿 타입 (선택)
+}
+
+export interface ProblemSection {
+  market_status: string;      // 시장 현황
+  problem_definition: string; // 핵심 문제점
+  development_necessity: string; // 개발 필요성
+}
+
+export interface SolutionSection {
+  development_plan: string;   // 솔루션 개요 + 개발 로드맵
+  differentiation: string;    // 차별화 포인트
+  competitiveness: string;    // 경쟁력 분석
+}
+
+export interface ScaleupSection {
+  business_model: string;     // 수익 모델
+  market_size: string;        // 시장 규모 (TAM/SAM/SOM)
+  roadmap: string;            // 사업화 로드맵
+}
+
+export interface TeamSection {
+  founder: string;            // 대표자 프로필
+  team_members: string;       // 팀 구성원
+  team_synergy: string;       // 팀 시너지
+}
+
+export interface BusinessPlanSectionData {
+  problem: ProblemSection;
+  solution: SolutionSection;
+  scaleup: ScaleupSection;
+  team: TeamSection;
+}
+
+export interface ScheduleItem {
+  no: string;
+  content: string;            // 개발 내용
+  period: string;             // 기간 (예: "25.03 ~ 25.05")
+  detail: string;             // 상세 내용
+}
+
+export interface BudgetItem {
+  category: string;           // 비용 항목 (재료비, 인건비 등)
+  detail: string;             // 상세 내용
+  amount: string;             // 금액 (문자열)
+}
+
+export interface TeamTableItem {
+  no: string;
+  position: string;           // 직책
+  role: string;               // 역할
+  capability: string;         // 역량/경력
+  status: string;             // 상태 (완료/예정)
+}
+
+export interface PartnerItem {
+  no: string;
+  name: string;               // 기관명
+  capability: string;         // 보유 역량
+  plan: string;               // 협력 계획
+  period: string;             // 시기
+}
+
+// 최종 사업계획서 데이터 구조
+export interface BusinessPlanData {
+  basicInfo: BusinessPlanBasicInfo;
+  sectionData: BusinessPlanSectionData;
+  schedule: ScheduleItem[];
+  budget: BudgetItem[];
+  teamTable: TeamTableItem[];
+  partners: PartnerItem[];
+  // 메타데이터
+  generatedAt: string;
+  scorecard: Scorecard;
+  validationScore: number;
+}

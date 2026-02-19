@@ -34,6 +34,50 @@ const CATEGORY_INFO: Record<string, { nameKo: string; max: number }> = {
   feedbackReflection: { nameKo: '피드백 반영', max: 10 },
 };
 
+// 6번: 페르소나 → 카테고리 매핑
+const PERSONA_CATEGORY_MAP: Record<string, { primary: string[]; secondary: string[] }> = {
+  Developer: {
+    primary: ['solution', 'feasibility'],
+    secondary: ['differentiation'],
+  },
+  Designer: {
+    primary: ['solution', 'problemDefinition'],
+    secondary: ['differentiation'],
+  },
+  VC: {
+    primary: ['marketAnalysis', 'revenueModel'],
+    secondary: ['differentiation', 'logicalConsistency'],
+  },
+  Marketer: {
+    primary: ['marketAnalysis', 'differentiation'],
+    secondary: ['revenueModel'],
+  },
+  Legal: {
+    primary: ['feasibility', 'logicalConsistency'],
+    secondary: ['differentiation'],
+  },
+  PM: {
+    primary: ['problemDefinition', 'solution'],
+    secondary: ['logicalConsistency'],
+  },
+  CTO: {
+    primary: ['solution', 'feasibility'],
+    secondary: ['logicalConsistency'],
+  },
+  CFO: {
+    primary: ['revenueModel', 'feasibility'],
+    secondary: ['marketAnalysis'],
+  },
+  EndUser: {
+    primary: ['problemDefinition'],
+    secondary: ['solution', 'differentiation'],
+  },
+  Operations: {
+    primary: ['feasibility', 'logicalConsistency'],
+    secondary: ['solution'],
+  },
+};
+
 // 페르소나별 설명 및 역할
 const PERSONA_DESCRIPTIONS: Record<string, { nameKo: string; role: string; focus: string }> = {
   Developer: {
@@ -128,6 +172,11 @@ function getAnalyzeSystemInstruction(level: string, personas: string[]) {
 }
 
 function buildScorecardStatus(scorecard: Scorecard | null): string {
+  const categories = [
+    'problemDefinition', 'solution', 'marketAnalysis', 'revenueModel',
+    'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection'
+  ] as const;
+
   if (!scorecard) {
     return `[현재 스코어카드 - 새 세션]
 모든 카테고리가 0점입니다. 사용자의 아이디어를 분석하여 해당하는 카테고리에 점수를 부여하세요.
@@ -141,13 +190,26 @@ function buildScorecardStatus(scorecard: Scorecard | null): string {
 - logicalConsistency (논리 일관성): 0/15
 - feasibility (실현 가능성): 0/15
 - feedbackReflection (피드백 반영): 0/10
-총점: 0/100`;
+총점: 0/100
+
+🎯 우선 채워야 할 카테고리: 문제 정의, 솔루션, 시장 분석, 차별화`;
   }
 
-  const categories = [
-    'problemDefinition', 'solution', 'marketAnalysis', 'revenueModel',
-    'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection'
-  ] as const;
+  // 카테고리별 점수 비율 계산 (current/max)
+  const categoryScores = categories.map(cat => ({
+    key: cat,
+    nameKo: CATEGORY_INFO[cat].nameKo,
+    current: scorecard[cat].current,
+    max: CATEGORY_INFO[cat].max,
+    ratio: scorecard[cat].current / CATEGORY_INFO[cat].max,
+    filled: scorecard[cat].filled
+  }));
+
+  // 가장 낮은 점수 비율 카테고리 찾기 (최대 3개)
+  const lowestCategories = [...categoryScores]
+    .sort((a, b) => a.ratio - b.ratio)
+    .slice(0, 3)
+    .filter(c => c.ratio < 0.7); // 70% 미만인 것만
 
   const emptyCategories = categories.filter(cat => !scorecard[cat].filled);
   const filledCategories = categories.filter(cat => scorecard[cat].filled);
@@ -156,164 +218,278 @@ function buildScorecardStatus(scorecard: Scorecard | null): string {
     const info = CATEGORY_INFO[cat];
     const score = scorecard[cat];
     const status = score.filled ? '[O]' : '[ ]';
-    return `${status} ${info.nameKo}: ${score.current}/${score.max}`;
+    const isLowest = lowestCategories.some(l => l.key === cat);
+    return `${status} ${info.nameKo}: ${score.current}/${score.max}${isLowest ? ' ⚠️' : ''}`;
   }).join('\n');
+
+  // 최저 카테고리에 대한 자연스러운 질문 예시 생성
+  const questionHints: Record<string, string> = {
+    problemDefinition: '"이 문제를 겪는 사람이 구체적으로 어떤 상황인가요?"',
+    solution: '"이걸 어떻게 해결하실 건가요?"',
+    marketAnalysis: '"비슷한 서비스 중에 XX가 있는데, 거기랑 뭐가 다를까요?"',
+    revenueModel: '"사용자가 돈을 내는 시점은 언제인가요?"',
+    differentiation: '"경쟁 서비스 대비 이게 왜 더 나은가요?"',
+    logicalConsistency: '"이 기능과 저 기능이 어떻게 연결되나요?"',
+    feasibility: '"이걸 만들려면 어떤 기술이 필요할까요?"',
+    feedbackReflection: '"제가 제안한 방식 중 어떤 게 마음에 드세요?"'
+  };
+
+  const lowestHints = lowestCategories
+    .map(c => `- ${c.nameKo}: ${questionHints[c.key] || '관련 질문을 자연스럽게 섞어주세요'}`)
+    .join('\n');
 
   return `[현재 스코어카드]
 ${statusLines}
 총점: ${scorecard.totalScore}/100
 
-${emptyCategories.length > 0 ? `[빈 카테고리 - 자연스럽게 이 방향으로 질문을 유도하세요]
-${emptyCategories.map(cat => CATEGORY_INFO[cat].nameKo).join(', ')}` : '[모든 카테고리 채워짐]'}
+🎯 [이번 턴 우선 타겟 - 자연스럽게 유도]
+${lowestCategories.length > 0 ? lowestCategories.map(c => `${c.nameKo} (${c.current}/${c.max})`).join(', ') : '균형 잡힌 상태'}
 
-${filledCategories.length > 0 ? `[이미 채워진 카테고리]
-${filledCategories.map(cat => `${CATEGORY_INFO[cat].nameKo}: ${scorecard[cat].current}점`).join(', ')}` : ''}`;
+💡 [자연스러운 질문 예시]
+${lowestHints || '특별히 낮은 카테고리 없음'}
+
+${emptyCategories.length > 0 ? `[빈 카테고리]
+${emptyCategories.map(cat => CATEGORY_INFO[cat].nameKo).join(', ')}` : '[모든 카테고리 채워짐]'}`;
 }
 
-// 페르소나별 3가지 관점 정의
-const PERSONA_PERSPECTIVES: Record<string, { id: string; label: string }[]> = {
+// 3번: Perspectives는 AI가 아이디어 맥락에서 동적 생성 (하드코딩 제거)
+// 단, Founder Profile 분석을 위해 허용된 perspectiveId만 사용
+
+// 페르소나별 허용된 perspectiveId (decisionAnalyzer.ts의 PERSPECTIVE_AXIS_MAPPING과 동기화)
+const ALLOWED_PERSPECTIVE_IDS: Record<string, { id: string; labelKo: string }[]> = {
   Developer: [
-    { id: 'security', label: '보안 중심' },
-    { id: 'speed', label: '개발 속도' },
-    { id: 'scalability', label: '확장성' },
+    { id: 'security', labelKo: '보안 우선' },
+    { id: 'speed', labelKo: '빠른 출시' },
+    { id: 'scalability', labelKo: '확장성' },
+    { id: 'data-structure', labelKo: '데이터 구조' },
+    { id: 'infra-cost', labelKo: '인프라 비용' },
+    { id: 'api-design', labelKo: 'API 설계' },
+    { id: 'realtime', labelKo: '실시간 처리' },
+    { id: 'offline', labelKo: '오프라인 지원' },
+    { id: 'ai-ml', labelKo: 'AI/ML 활용' },
+    { id: 'location', labelKo: '위치 기반' },
+    { id: 'integration', labelKo: '외부 연동' },
+    { id: 'performance', labelKo: '성능 최적화' },
   ],
   Designer: [
-    { id: 'simplicity', label: '단순함' },
-    { id: 'delight', label: '감성 경험' },
-    { id: 'accessibility', label: '접근성' },
+    { id: 'usability', labelKo: '사용성' },
+    { id: 'aesthetics', labelKo: '심미성' },
+    { id: 'accessibility', labelKo: '접근성' },
+    { id: 'onboarding', labelKo: '온보딩' },
+    { id: 'gamification', labelKo: '게임화' },
+    { id: 'mobile-first', labelKo: '모바일 우선' },
+    { id: 'simplicity', labelKo: '단순함' },
+    { id: 'personalization', labelKo: '개인화' },
+    { id: 'emotional', labelKo: '감성 디자인' },
+    { id: 'consistency', labelKo: '일관성' },
+    { id: 'feedback', labelKo: '피드백 UX' },
+    { id: 'trust', labelKo: '신뢰감' },
   ],
   VC: [
-    { id: 'growth', label: '성장성' },
-    { id: 'profitability', label: '수익성' },
-    { id: 'defensibility', label: '진입장벽' },
-  ],
-  Marketer: [
-    { id: 'viral', label: '바이럴' },
-    { id: 'brand', label: '브랜딩' },
-    { id: 'acquisition', label: '고객 획득' },
-  ],
-  Legal: [
-    { id: 'compliance', label: '규제 준수' },
-    { id: 'ip', label: '지적재산권' },
-    { id: 'liability', label: '책임 제한' },
-  ],
-  PM: [
-    { id: 'mvp', label: 'MVP 집중' },
-    { id: 'metrics', label: '지표 중심' },
-    { id: 'iteration', label: '빠른 반복' },
-  ],
-  CTO: [
-    { id: 'architecture', label: '아키텍처' },
-    { id: 'team', label: '팀 빌딩' },
-    { id: 'techdebt', label: '기술 부채' },
-  ],
-  CFO: [
-    { id: 'cashflow', label: '현금 흐름' },
-    { id: 'fundraising', label: '자금 조달' },
-    { id: 'uniteconomics', label: '유닛 이코노믹스' },
-  ],
-  EndUser: [
-    { id: 'convenience', label: '편의성' },
-    { id: 'value', label: '가치 인식' },
-    { id: 'habit', label: '습관 형성' },
-  ],
-  Operations: [
-    { id: 'efficiency', label: '효율성' },
-    { id: 'support', label: '고객 지원' },
-    { id: 'process', label: '프로세스' },
+    { id: 'revenue', labelKo: '수익 모델' },
+    { id: 'market-size', labelKo: '시장 규모' },
+    { id: 'moat', labelKo: '진입장벽' },
+    { id: 'unit-economics', labelKo: '유닛 이코노믹스' },
+    { id: 'timing', labelKo: '시장 타이밍' },
+    { id: 'team', labelKo: '팀 역량' },
+    { id: 'network-effect', labelKo: '네트워크 효과' },
+    { id: 'retention', labelKo: '리텐션' },
+    { id: 'exit', labelKo: '엑싯 전략' },
+    { id: 'regulation', labelKo: '규제 환경' },
+    { id: 'global', labelKo: '글로벌 확장' },
+    { id: 'viral', labelKo: '바이럴 성장' },
   ],
 };
 
-function buildPrompt(idea: string, historyContext: string, personas: string[], scorecard: Scorecard | null) {
-  const personaResponseTemplate = personas
-    .map((p) => {
-      const desc = PERSONA_DESCRIPTIONS[p];
-      const perspectives = PERSONA_PERSPECTIVES[p] || [
-        { id: 'option_1', label: '관점1' },
-        { id: 'option_2', label: '관점2' },
-        { id: 'option_3', label: '관점3' },
-      ];
+function buildPrompt(idea: string, historyContext: string, personas: string[], scorecard: Scorecard | null, turnNumber: number = 1, level: string = 'mvp') {
+  // 현재 점수 계산
+  const currentTotal = scorecard?.totalScore || 0;
 
-      const perspectivesTemplate = perspectives.map((persp, idx) => `{
-          "perspectiveId": "${persp.id}",
-          "perspectiveLabel": "${persp.label}",
-          "content": "${persp.label} 관점에서의 구체적인 조언 (2-3문장)",
-          "suggestedActions": ["이 관점의 실행 방안 1", "이 관점의 실행 방안 2"]
-        }`).join(',\n        ');
+  // level에 따른 목표 점수 (동적)
+  const TARGET_SCORES: Record<string, number> = {
+    sketch: 40,
+    mvp: 65,
+    investor: 85,
+  };
+  const targetScore = TARGET_SCORES[level] || 65;
 
-      return `{
-      "role": "${p}",
-      "name": "${desc?.nameKo || p}",
-      "content": "${desc?.nameKo || p} 관점의 핵심 피드백 요약 (1문장)",
-      "tone": "Analytical",
-      "suggestedActions": [],
-      "perspectives": [
-        ${perspectivesTemplate}
-      ]
-    }`;
-    })
-    .join(',\n    ');
+  const remainingTurns = Math.max(1, 8 - turnNumber);
+  const expectedPerTurn = Math.ceil((targetScore - currentTotal) / remainingTurns);
+
+  // 페르소나별 담당 카테고리 정보 생성
+  const personaCategoryInfo = personas.map(p => {
+    const map = PERSONA_CATEGORY_MAP[p];
+    const desc = PERSONA_DESCRIPTIONS[p];
+    return `- ${desc?.nameKo || p}: 주로 [${map?.primary.map(c => CATEGORY_INFO[c]?.nameKo).join(', ')}] 점수를 올림, 가끔 [${map?.secondary.map(c => CATEGORY_INFO[c]?.nameKo).join(', ')}]도 가능`;
+  }).join('\n');
 
   const scorecardStatus = buildScorecardStatus(scorecard);
+
+  // 2번: 단계별 앵커 예시
+  const progressExamples = `
+**[점수 진행 예시 - 대화할수록 반드시 우상향]**
+- 1턴 후: totalScore 12~18 (첫 아이디어 입력)
+- 3턴 후: totalScore 30~40 (기본 컨셉 확립)
+- 6턴 후: totalScore 50~65 (세부사항 구체화)
+- 8턴 후: totalScore 65~80 (검증 완료)`;
 
   return `${historyContext}
 ${scorecardStatus}
 
-사용자 입력(결정사항): "${idea}"
+사용자 입력: "${idea}"
 
-위 입력을 바탕으로 ${personas.length}가지 관점(${personas.map(p => PERSONA_DESCRIPTIONS[p]?.nameKo || p).join(', ')})에서 분석하세요.
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📌 게임 규칙: 이것은 "성장하는 게임"입니다
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-**중요: 각 페르소나별 3가지 perspectives 필수**
-- 각 페르소나(Developer, Designer, VC 등)는 반드시 3가지 서로 다른 관점(perspectives)을 제시해야 합니다
-- 각 관점은 서로 다른 접근 방식을 제안해야 합니다 (예: Developer → 보안 vs 속도 vs 확장성)
-- 사용자는 이 3가지 중 하나를 선택하여 결정을 내립니다
-- perspectives 배열에 정확히 3개의 항목이 있어야 합니다
+**핵심 원칙:**
+- 대화가 진행될수록 점수는 반드시 우상향합니다
+- 유저가 어떤 답을 해도 최소 +3점은 올라갑니다
+- 좋은 답변이면 +5~10점이 올라갑니다
+- 매 턴마다 최소 1개 카테고리가 반드시 올라가야 합니다
 
-**스코어카드 채점 규칙:**
-1. 사용자의 응답 내용을 분석하여 해당 카테고리에 점수를 부여하세요
-2. 점수는 절대 감소하지 않습니다 (증가만 가능)
-3. 각 카테고리의 최대 점수를 초과할 수 없습니다
-4. 빈 카테고리([ ])가 있다면, 해당 영역을 탐색하는 질문을 자연스럽게 유도하세요
-5. categoryUpdates에 이번 턴에서 변동된 점수만 기록하세요 (delta는 증가분만)
+**현재 상태:**
+- 턴: ${turnNumber}/8
+- 현재 점수: ${currentTotal}점
+- 목표 점수: ${targetScore}점 (${level === 'sketch' ? 'Sketch' : level === 'investor' ? 'Defense' : 'MVP'} 등록)
+- 권장 페이스: 이번 턴 +${Math.max(5, expectedPerTurn)}점 이상
 
-**카테고리별 채점 기준:**
-- problemDefinition: 문제가 명확하고 구체적인가? (고객 페인포인트, 문제의 심각성)
-- solution: 해결책이 구체적인가? (기능, 기술 스택, 구현 방법)
-- marketAnalysis: 시장과 경쟁 환경을 파악했는가? (TAM/SAM, 경쟁사)
-- revenueModel: 수익화 전략이 현실적인가? (가격, 과금 모델)
-- differentiation: 차별화 포인트가 명확한가? (경쟁 우위)
-- logicalConsistency: 전체 논리가 일관성 있는가?
-- feasibility: 실현 가능한가? (기술, 자원, 시간)
-- feedbackReflection: 전문가 조언을 수용하고 개선했는가?
+${progressExamples}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 점수 증가 트리거 (구체적 조건)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+| 유저 행동 | 점수 증가 |
+|-----------|-----------|
+| 새로운 정보 제공 (아이디어, 기능, 타겟 등) | +3~5 |
+| 제시된 선택지 중 하나 선택 | +2~4 |
+| 자기만의 답변 직접 작성 | +4~6 |
+| 페르소나 조언을 반영해 수정/발전 | +5~8 |
+| 구체적 숫자/데이터 언급 | +3~5 |
+
+**🔔 피드백 반영 (feedbackReflection) 특별 규칙:**
+- "[종합 결정 사항]" 또는 "[User ACCEPTED & DECIDED]"가 입력에 포함되면 → feedbackReflection +3~5
+- 유저가 "~할게요", "~로 정했어요", "~를 선택"처럼 결정을 표명하면 → feedbackReflection +2~3
+- 이 카테고리는 유저가 적극적으로 피드백을 수용할 때 올라갑니다
+
+**절대 규칙:**
+- 점수 감소는 없습니다
+- 모든 카테고리 점수는 이전보다 같거나 높아야 합니다
+- delta가 0인 카테고리는 categoryUpdates에 포함하지 마세요
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+👥 페르소나별 담당 카테고리
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${personaCategoryInfo}
+
+각 페르소나는 자신의 담당 카테고리 점수를 올려주세요.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🎯 낮은 카테고리 자연스러운 유도 규칙
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+위 스코어카드에서 ⚠️ 표시된 카테고리는 점수가 낮습니다.
+각 페르소나는 **본래 조언을 하면서** 자연스럽게 낮은 카테고리 관련 내용을 섞어주세요.
+
+**방법:**
+- 직접적으로 묻지 말고, 맥락 안에서 유도하세요
+- 페르소나의 전문 영역과 연결해서 질문하세요
+
+**예시:**
+Developer가 기술 스택 조언하면서 차별화(differentiation) 유도:
+"Flutter 좋은 선택이에요. 그런데 비슷한 산책 앱 중에 스트라바가 있잖아요. 거기랑 뭐가 다를까요?"
+→ 기술 조언 + 차별화 질문이 한 턴에 해결
+
+VC가 수익 모델 조언하면서 시장분석(marketAnalysis) 유도:
+"구독 모델이 좋겠네요. 그런데 이 시장에서 월 5천원을 내는 사람이 얼마나 있을까요?"
+→ 수익 모델 조언 + 시장 규모 질문이 한 턴에 해결
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+💡 Perspectives 생성 규칙 (Founder Profile 분석용)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+⚠️ 중요: perspectiveId는 반드시 아래 목록에서만 선택하세요!
+이 ID는 창업자 성향 분석에 사용되므로 정확히 맞춰야 합니다.
+
+**Developer 허용 ID (12개):**
+security(보안), speed(빠른출시), scalability(확장성), data-structure(데이터구조),
+infra-cost(인프라비용), api-design(API설계), realtime(실시간), offline(오프라인),
+ai-ml(AI/ML), location(위치기반), integration(외부연동), performance(성능최적화)
+
+**Designer 허용 ID (12개):**
+usability(사용성), aesthetics(심미성), accessibility(접근성), onboarding(온보딩),
+gamification(게임화), mobile-first(모바일우선), simplicity(단순함), personalization(개인화),
+emotional(감성디자인), consistency(일관성), feedback(피드백UX), trust(신뢰감)
+
+**VC 허용 ID (12개):**
+revenue(수익모델), market-size(시장규모), moat(진입장벽), unit-economics(유닛이코노믹스),
+timing(시장타이밍), team(팀역량), network-effect(네트워크효과), retention(리텐션),
+exit(엑싯전략), regulation(규제환경), global(글로벌확장), viral(바이럴성장)
+
+**사용법:**
+- perspectiveId: 반드시 위 목록의 영어 ID 중 하나 (예: "speed", "usability", "revenue")
+- perspectiveLabel: 한글 라벨은 아이디어 맥락에 맞게 자유롭게 작성
+- content: 해당 관점에서의 구체적 조언
+
+**예시:**
+산책앱 + Developer:
+- { perspectiveId: "location", perspectiveLabel: "GPS 정확도 우선", content: "..." }
+- { perspectiveId: "performance", perspectiveLabel: "배터리 최적화", content: "..." }
+- { perspectiveId: "offline", perspectiveLabel: "오프라인 산책 기록", content: "..." }
+
+핀테크 + VC:
+- { perspectiveId: "moat", perspectiveLabel: "금융 라이선스 진입장벽", content: "..." }
+- { perspectiveId: "regulation", perspectiveLabel: "핀테크 규제 대응", content: "..." }
+- { perspectiveId: "revenue", perspectiveLabel: "수수료 기반 수익", content: "..." }
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 한국어로 응답하세요. 반드시 다음 JSON 형식으로 응답하세요:
 {
   "responses": [
-    ${personaResponseTemplate}
+    {
+      "role": "Developer",
+      "name": "개발자",
+      "content": "핵심 피드백 요약 (1문장)",
+      "tone": "Analytical",
+      "suggestedActions": [],
+      "perspectives": [
+        {
+          "perspectiveId": "speed",
+          "perspectiveLabel": "빠른 MVP 출시",
+          "content": "이 관점에서의 구체적인 조언 (2-3문장)",
+          "suggestedActions": ["실행 방안 1", "실행 방안 2"]
+        },
+        { "perspectiveId": "scalability", "perspectiveLabel": "확장 가능한 구조", "content": "...", "suggestedActions": ["..."] },
+        { "perspectiveId": "security", "perspectiveLabel": "보안 우선 설계", "content": "...", "suggestedActions": ["..."] }
+      ]
+    }
   ],
   "metrics": {
-    "score": 75,
+    "score": ${currentTotal + Math.max(5, expectedPerTurn)},
     "developerScore": 70,
     "designerScore": 80,
     "vcScore": 75,
-    "keyRisks": ["주요 리스크 1", "주요 리스크 2"],
-    "keyStrengths": ["강점 1", "강점 2"],
+    "keyRisks": ["주요 리스크 1"],
+    "keyStrengths": ["강점 1"],
     "summary": "전체 요약 (1문장)"
   },
   "scorecard": {
-    "problemDefinition": { "current": 8, "max": 15, "filled": true },
-    "solution": { "current": 5, "max": 15, "filled": true },
-    "marketAnalysis": { "current": 0, "max": 10, "filled": false },
-    "revenueModel": { "current": 0, "max": 10, "filled": false },
-    "differentiation": { "current": 0, "max": 10, "filled": false },
-    "logicalConsistency": { "current": 3, "max": 15, "filled": true },
-    "feasibility": { "current": 0, "max": 15, "filled": false },
-    "feedbackReflection": { "current": 0, "max": 10, "filled": false },
-    "totalScore": 16
+    "problemDefinition": { "current": ${(scorecard?.problemDefinition.current || 0) + 3}, "max": 15, "filled": true },
+    "solution": { "current": ${(scorecard?.solution.current || 0) + 2}, "max": 15, "filled": true },
+    "marketAnalysis": { "current": ${scorecard?.marketAnalysis.current || 0}, "max": 10, "filled": ${scorecard?.marketAnalysis.filled || false} },
+    "revenueModel": { "current": ${scorecard?.revenueModel.current || 0}, "max": 10, "filled": ${scorecard?.revenueModel.filled || false} },
+    "differentiation": { "current": ${scorecard?.differentiation.current || 0}, "max": 10, "filled": ${scorecard?.differentiation.filled || false} },
+    "logicalConsistency": { "current": ${(scorecard?.logicalConsistency.current || 0) + 1}, "max": 15, "filled": true },
+    "feasibility": { "current": ${scorecard?.feasibility.current || 0}, "max": 15, "filled": ${scorecard?.feasibility.filled || false} },
+    "feedbackReflection": { "current": ${scorecard?.feedbackReflection.current || 0}, "max": 10, "filled": ${scorecard?.feedbackReflection.filled || false} },
+    "totalScore": ${currentTotal + Math.max(5, expectedPerTurn)}
   },
   "categoryUpdates": [
-    { "category": "problemDefinition", "delta": 5, "reason": "고객 페인포인트를 구체화함" },
-    { "category": "solution", "delta": 3, "reason": "기술 스택 결정" }
+    { "category": "problemDefinition", "delta": 3, "reason": "문제 상황을 구체화함" },
+    { "category": "solution", "delta": 2, "reason": "해결 방향 제시" }
   ]
 }`;
 }
@@ -326,7 +502,8 @@ export const POST = withRateLimit(async (request: NextRequest) => {
       conversationHistory = [],
       level = 'mvp',
       personas = ['Developer', 'Designer', 'VC'],
-      currentScorecard = null
+      currentScorecard = null,
+      turnNumber = 1
     } = await request.json();
 
     if (!idea || idea.trim().length === 0) {
@@ -340,7 +517,7 @@ export const POST = withRateLimit(async (request: NextRequest) => {
       ? `[이전 대화 및 결정 내역]:\n${conversationHistory.join('\n')}\n\n`
       : '';
 
-    const prompt = buildPrompt(idea, historyContext, personas, currentScorecard);
+    const prompt = buildPrompt(idea, historyContext, personas, currentScorecard, turnNumber, level);
 
     // 스코어카드 포함으로 토큰 증가
     const maxTokens = level === 'sketch' ? 1500 : 3000;
@@ -360,26 +537,111 @@ export const POST = withRateLimit(async (request: NextRequest) => {
     const text = result.response.text();
     const parsed = JSON.parse(text);
 
-    // 스코어카드 점수 감소 방지 로직 (서버 측)
-    if (parsed.scorecard && currentScorecard) {
-      const categories = [
-        'problemDefinition', 'solution', 'marketAnalysis', 'revenueModel',
-        'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection'
-      ] as const;
+    // 5번: 스코어카드 점수 보정 로직 (최소 +2 보장)
+    const categories = [
+      'problemDefinition', 'solution', 'marketAnalysis', 'revenueModel',
+      'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection'
+    ] as const;
 
+    if (parsed.scorecard) {
       let recalculatedTotal = 0;
-      for (const cat of categories) {
-        // 점수 감소 방지: 기존 점수보다 낮으면 기존 점수 유지
-        if (parsed.scorecard[cat].current < currentScorecard[cat].current) {
-          parsed.scorecard[cat].current = currentScorecard[cat].current;
+      let totalIncrease = 0;
+
+      // 🔔 피드백 반영 자동 감지: "[종합 결정 사항]" 또는 결정 표현이 있으면 feedbackReflection 자동 가산
+      const isFeedbackResponse = idea.includes('[종합 결정 사항]') ||
+        idea.includes('[User ACCEPTED & DECIDED]') ||
+        /결정.*했|선택.*했|할게요|하겠습니다|로\s*정했/.test(idea);
+
+      if (isFeedbackResponse && parsed.scorecard.feedbackReflection) {
+        const feedbackCurrent = parsed.scorecard.feedbackReflection.current || 0;
+        const feedbackMax = 10;
+        const feedbackBonus = Math.min(3, feedbackMax - feedbackCurrent);
+        if (feedbackBonus > 0) {
+          parsed.scorecard.feedbackReflection.current = feedbackCurrent + feedbackBonus;
+          parsed.scorecard.feedbackReflection.filled = true;
+
+          if (!parsed.categoryUpdates) {
+            parsed.categoryUpdates = [];
+          }
+          const existingFeedbackUpdate = parsed.categoryUpdates.find((u: any) => u.category === 'feedbackReflection');
+          if (existingFeedbackUpdate) {
+            existingFeedbackUpdate.delta += feedbackBonus;
+          } else {
+            parsed.categoryUpdates.push({
+              category: 'feedbackReflection',
+              delta: feedbackBonus,
+              reason: '피드백 반영 완료'
+            });
+          }
         }
+      }
+
+      for (const cat of categories) {
+        const prevScore = currentScorecard?.[cat]?.current || 0;
+        const newScore = parsed.scorecard[cat]?.current || 0;
+        const maxScore = CATEGORY_INFO[cat].max;
+
+        // 점수 감소 방지: 기존 점수보다 낮으면 기존 점수 유지
+        if (newScore < prevScore) {
+          parsed.scorecard[cat].current = prevScore;
+        }
+
+        // 최대 점수 초과 방지
+        if (parsed.scorecard[cat].current > maxScore) {
+          parsed.scorecard[cat].current = maxScore;
+        }
+
         // filled 상태 유지: 한번 채워지면 계속 filled
-        if (currentScorecard[cat].filled) {
+        if (currentScorecard?.[cat]?.filled) {
           parsed.scorecard[cat].filled = true;
         }
+
+        // 0보다 크면 filled
+        if (parsed.scorecard[cat].current > 0) {
+          parsed.scorecard[cat].filled = true;
+        }
+
+        totalIncrease += (parsed.scorecard[cat].current - prevScore);
         recalculatedTotal += parsed.scorecard[cat].current;
       }
+
+      // 최소 +2점 보장: 대화했는데 점수가 안 올랐으면 강제 가산
+      if (totalIncrease < 2 && currentScorecard) {
+        // 아직 최대가 아닌 카테고리 중 하나에 +2
+        for (const cat of categories) {
+          const current = parsed.scorecard[cat].current;
+          const max = CATEGORY_INFO[cat].max;
+          if (current < max) {
+            const addAmount = Math.min(2, max - current);
+            parsed.scorecard[cat].current += addAmount;
+            parsed.scorecard[cat].filled = true;
+            recalculatedTotal += addAmount;
+
+            // categoryUpdates에 추가
+            if (!parsed.categoryUpdates) {
+              parsed.categoryUpdates = [];
+            }
+            const existingUpdate = parsed.categoryUpdates.find((u: any) => u.category === cat);
+            if (existingUpdate) {
+              existingUpdate.delta += addAmount;
+            } else {
+              parsed.categoryUpdates.push({
+                category: cat,
+                delta: addAmount,
+                reason: '대화 참여 보너스'
+              });
+            }
+            break;
+          }
+        }
+      }
+
       parsed.scorecard.totalScore = recalculatedTotal;
+
+      // categoryUpdates에서 delta가 0인 항목 제거
+      if (parsed.categoryUpdates) {
+        parsed.categoryUpdates = parsed.categoryUpdates.filter((u: any) => u.delta > 0);
+      }
     }
 
     return NextResponse.json({ success: true, result: parsed });

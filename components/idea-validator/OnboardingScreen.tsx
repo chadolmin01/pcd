@@ -33,14 +33,14 @@ const showcaseColumn2 = [...[...showcaseItems].reverse(), ...showcaseItems, ...s
 // Showcase Card Component
 const ShowcaseCard = memo(({ item }: { item: typeof showcaseItems[0] }) => (
   <div className={`
-    w-[260px] p-5 rounded-sm shadow-sm border border-gray-200/50 flex flex-col justify-between transition-transform hover:scale-[1.02]
+    w-[260px] p-5 rounded shadow-sm border border-gray-200/50 flex flex-col justify-between transition-transform hover:scale-[1.02]
     ${item.color}
   `}>
     <div className="flex justify-between items-start mb-4">
        <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${item.color.includes('bg-black') || item.color.includes('bg-gray-900') || item.color.includes('bg-emerald') || item.color.includes('bg-blue') ? 'border-white/20 bg-white/10' : 'border-gray-100 bg-gray-50 text-black'}`}>
           {item.type === 'idea' ? <Lightbulb size={14}/> : <Target size={14}/>}
        </div>
-       <span className={`text-[9px] font-mono font-bold uppercase border px-1.5 py-0.5 rounded-sm ${item.color.includes('bg-black') || item.color.includes('bg-gray-900') || item.color.includes('bg-emerald') || item.color.includes('bg-blue') ? 'border-white/30' : 'border-gray-200'}`}>
+       <span className={`text-[9px] font-mono font-bold uppercase border px-1.5 py-0.5 rounded ${item.color.includes('bg-black') || item.color.includes('bg-gray-900') || item.color.includes('bg-emerald') || item.color.includes('bg-blue') ? 'border-white/30' : 'border-gray-200'}`}>
          {item.tag}
        </span>
     </div>
@@ -172,7 +172,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   if (phase === 'auto-login') {
     return (
       <div className="fixed inset-0 z-[100] bg-[#FAFAFA] flex flex-col items-center justify-center font-mono">
-        <div className="w-12 h-12 bg-black text-white flex items-center justify-center font-black text-2xl rounded-sm mb-6 animate-pulse">D</div>
+        <div className="w-12 h-12 bg-black text-white flex items-center justify-center font-black text-2xl rounded mb-6 animate-pulse">D</div>
         <div className="text-sm font-medium text-gray-900 mb-2">다시 오신 것을 환영합니다!</div>
         <div className="text-[10px] text-gray-400 font-medium tracking-widest uppercase flex items-center gap-2">
            <Loader2 size={12} className="animate-spin" />
@@ -219,7 +219,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
          {/* Top Branding */}
          <div className="p-8 md:p-10 animate-slide-up-fade">
             <div className="flex items-center gap-2 mb-6">
-               <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black text-lg rounded-sm">D</div>
+               <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black text-lg rounded">D</div>
                <span className="font-bold text-xl tracking-tight">Draft.</span>
             </div>
             <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-100 rounded-full">
@@ -238,7 +238,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
             </p>
 
             {Object.values(errors).some(Boolean) && (
-               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-sm flex items-center gap-2 text-red-700 text-sm">
+               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded flex items-center gap-2 text-red-700 text-sm">
                   <AlertCircle size={16} />
                   입력 정보를 확인해주세요.
                </div>
@@ -257,7 +257,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                        setFormData(prev => ({ ...prev, name: e.target.value }));
                        if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
                      }}
-                     className={`w-full px-4 py-3 bg-gray-50 border rounded-sm text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
+                     className={`w-full px-4 py-3 bg-gray-50 border rounded text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
                      placeholder="홍길동"
                   />
                   {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
@@ -275,7 +275,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                        setFormData(prev => ({ ...prev, organization: e.target.value }));
                        if (errors.organization) setErrors(prev => ({ ...prev, organization: undefined }));
                      }}
-                     className={`w-full px-4 py-3 bg-gray-50 border rounded-sm text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 ${errors.organization ? 'border-red-300' : 'border-gray-200'}`}
+                     className={`w-full px-4 py-3 bg-gray-50 border rounded text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 ${errors.organization ? 'border-red-300' : 'border-gray-200'}`}
                      placeholder="회사명 또는 학교명"
                   />
                   {errors.organization && <p className="text-xs text-red-500">{errors.organization}</p>}
@@ -293,7 +293,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                        setFormData(prev => ({ ...prev, email: e.target.value }));
                        if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
                      }}
-                     className={`w-full px-4 py-3 bg-gray-50 border rounded-sm text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 font-mono ${errors.email ? 'border-red-300' : 'border-gray-200'}`}
+                     className={`w-full px-4 py-3 bg-gray-50 border rounded text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 font-mono ${errors.email ? 'border-red-300' : 'border-gray-200'}`}
                      placeholder="name@company.com"
                   />
                   {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
@@ -312,7 +312,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                            }}
                            className="sr-only peer"
                         />
-                        <div className={`w-5 h-5 border-2 rounded-sm transition-all flex items-center justify-center
+                        <div className={`w-5 h-5 border-2 rounded transition-all flex items-center justify-center
                            ${formData.privacyConsent
                              ? 'bg-black border-black'
                              : `bg-white group-hover:border-gray-400 ${errors.privacyConsent ? 'border-red-300' : 'border-gray-300'}`
@@ -343,7 +343,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                <button
                   type="submit"
                   disabled={!isFormValid || isSubmitting}
-                  className="w-full bg-black text-white py-3.5 rounded-sm text-sm font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 group shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className="w-full bg-black text-white py-3.5 rounded text-sm font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 group shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6"
                >
                   {isSubmitting ? (
                      <Loader2 size={16} className="animate-spin" />

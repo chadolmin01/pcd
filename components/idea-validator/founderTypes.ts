@@ -50,6 +50,7 @@ export const FOUNDER_TYPES: Record<FounderTypeId, FounderType> = {
     bestMatch: 'lab-architect',
     color: '#F59E0B',
     bgColor: '#FFFBEB',
+    mascotUrl: '/img/founders/mark%20zuckerberg.jpg',
     cardImageUrl: '/img/blitz.jpeg',
   },
   'lab-architect': {
@@ -69,6 +70,7 @@ export const FOUNDER_TYPES: Record<FounderTypeId, FounderType> = {
     bestMatch: 'blitz-builder',
     color: '#8B5CF6',
     bgColor: '#F5F3FF',
+    mascotUrl: '/img/founders/steve%20jobs.avif',
     cardImageUrl: '/img/lab ar.jpeg',
   },
   'market-sniper': {
@@ -88,6 +90,7 @@ export const FOUNDER_TYPES: Record<FounderTypeId, FounderType> = {
     bestMatch: 'lab-architect',
     color: '#10B981',
     bgColor: '#ECFDF5',
+    mascotUrl: '/img/founders/Brian%20Chesky%20(Airbnb).jpg',
     cardImageUrl: '/img/sniper.jpeg',
   },
   'pivot-surfer': {
@@ -107,6 +110,7 @@ export const FOUNDER_TYPES: Record<FounderTypeId, FounderType> = {
     bestMatch: 'moat-builder',
     color: '#06B6D4',
     bgColor: '#ECFEFF',
+    mascotUrl: '/img/founders/Stewart%20Butterfield%20(Slack).jpg',
     cardImageUrl: '/img/surfer.jpeg',
   },
   'moat-builder': {
@@ -126,6 +130,7 @@ export const FOUNDER_TYPES: Record<FounderTypeId, FounderType> = {
     bestMatch: 'market-sniper',
     color: '#6366F1',
     bgColor: '#EEF2FF',
+    mascotUrl: '/img/founders/Jensen%20Huang%20(NVIDIA).jpg',
     cardImageUrl: '/img/moat builder.jpeg',
   },
   'vibe-architect': {
@@ -145,6 +150,7 @@ export const FOUNDER_TYPES: Record<FounderTypeId, FounderType> = {
     bestMatch: 'market-sniper',
     color: '#EC4899',
     bgColor: '#FDF2F8',
+    mascotUrl: '/img/founders/Brian%20Acton%20(WhatsApp).jpg',
     cardImageUrl: '/img/vibe ar.jpeg',
   },
 };

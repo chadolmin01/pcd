@@ -36,7 +36,7 @@ const CategoryBar = memo(({
   return (
     <div className={`flex items-center gap-3 py-2 ${isFailing ? 'text-red-600' : ''}`}>
       {/* 채움 상태 표시 */}
-      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
+      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
         score.filled
           ? 'bg-gray-900 border-gray-900'
           : isFailing
@@ -126,7 +126,7 @@ const ScorecardPanel: React.FC<ScorecardPanelProps> = ({
   ];
 
   return (
-    <div className={`bg-white border border-gray-200 rounded-sm ${className}`}>
+    <div className={`bg-white border border-gray-200 rounded ${className}`}>
       {/* 헤더 - 총점 */}
       <div className="p-4 border-b border-gray-100">
         <div className="flex items-center justify-between mb-3">

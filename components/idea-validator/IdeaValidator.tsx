@@ -5,7 +5,7 @@ import OnboardingScreen from './OnboardingScreen';
 import SelectionScreen from './SelectionScreen';
 import ChatInterface from './ChatInterface';
 import ResultView from './ResultView';
-import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData } from './types';
+import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData, ChatMessage, Scorecard, createEmptyScorecard } from './types';
 import { validationResultsStore } from '@/src/lib/validationResultsStore';
 import { toast } from 'sonner';
 import { useUsage } from '@/src/hooks/useUsage';
@@ -31,6 +31,10 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
   const [selectedLevel, setSelectedLevel] = useState<ValidationLevel>(ValidationLevel.MVP);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaRole[]>(DEFAULT_PERSONAS);
   const [userData, setUserData] = useState<OnboardingData | null>(null);
+  // 종합 결과물 생성용 추가 상태
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [scorecard, setScorecard] = useState<Scorecard>(createEmptyScorecard());
+  const [ideaCategory, setIdeaCategory] = useState<string>('');
 
   // Usage tracking
   const { recordUsage } = useUsage(userData?.email || null);
@@ -57,10 +61,21 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
 
   const [savedResultId, setSavedResultId] = useState<string | null>(null);
 
-  const handleChatComplete = async (history: string, idea: string, advice: string[], score?: number) => {
+  const handleChatComplete = async (
+    history: string,
+    idea: string,
+    advice: string[],
+    score?: number,
+    messages?: ChatMessage[],
+    currentScorecard?: Scorecard,
+    category?: string
+  ) => {
     setConversationHistory(history);
     setProjectIdea(idea);
     setReflectedAdvice(advice);
+    if (messages) setChatMessages(messages);
+    if (currentScorecard) setScorecard(currentScorecard);
+    if (category) setIdeaCategory(category);
     setView(AppState.RESULT);
 
     // Save validation result for use in project creation
@@ -74,7 +89,9 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
 
       // Record usage for this level
       const levelKey = selectedLevel.toLowerCase() as 'sketch' | 'mvp' | 'defense';
-      await recordUsage(levelKey, score, savedResult.id);
+      console.log('[Usage] Recording:', { email: userData?.email, levelKey, score, validationId: savedResult.id });
+      const usageResult = await recordUsage(levelKey, score, savedResult.id);
+      console.log('[Usage] Result:', usageResult);
 
       toast.success('검증 결과가 저장되었습니다');
     } catch (error) {
@@ -107,7 +124,8 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
             onSelect={handleSelection}
             skipToLevelSelect={true}
             onBack={() => {
-              // 로그아웃: userData 초기화 후 온보딩 화면으로 이동
+              // 로그아웃: localStorage 세션 삭제 + userData 초기화 후 온보딩 화면으로 이동
+              localStorage.removeItem('prd_demo_session');
               setUserData(null);
               setView(AppState.ONBOARDING);
               toast.info('로그아웃 되었습니다');
@@ -138,6 +156,9 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
               originalIdea={projectIdea}
               reflectedAdvice={reflectedAdvice}
               onComplete={handleResultComplete}
+              rawMessages={chatMessages}
+              scorecard={scorecard}
+              ideaCategory={ideaCategory}
             />
           </div>
         );

@@ -5,7 +5,7 @@ import { withRateLimit } from '@/src/lib/rate-limit';
 // 레벨별 일간 제한
 const LEVEL_LIMITS = {
   sketch: -1,  // 무제한
-  mvp: 3,      // 일 3회
+  mvp: 10,     // 일 10회
   defense: 1,  // MVP 80점 이상 시 일 1회 해금
 };
 
@@ -177,14 +177,14 @@ export const POST = withRateLimit(async (request: NextRequest) => {
       }
     }
 
-    // 사용량 기록
+    // 사용량 기록 (validation_id는 UUID 타입이므로 문자열 ID는 저장하지 않음)
     const { data, error } = await supabase
       .from('prd_usage')
       .insert({
         user_email: email,
         level,
         score: score || null,
-        validation_id: validationId || null,
+        // validation_id는 UUID 형식만 허용 - 문자열 ID는 무시
       })
       .select()
       .single();

@@ -11,7 +11,15 @@ import ScorecardPanel from './ScorecardPanel';
 
 
 interface ChatInterfaceProps {
-  onComplete: (history: string, idea: string, reflectedAdvice: string[], score?: number) => void;
+  onComplete: (
+    history: string,
+    idea: string,
+    reflectedAdvice: string[],
+    score?: number,
+    messages?: ChatMessage[],
+    currentScorecard?: Scorecard,
+    category?: string
+  ) => void;
   level: ValidationLevel;
   personas?: PersonaRole[];
   // External input control (for using persistent input from parent)
@@ -68,6 +76,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   // Progressive Scorecard 상태
   const [scorecard, setScorecard] = useState<Scorecard>(createEmptyScorecard());
   const [recentUpdates, setRecentUpdates] = useState<CategoryUpdate[]>([]);
+
+  // 의사결정 프로필 갱신 트리거
+  const [decisionRefreshTrigger, setDecisionRefreshTrigger] = useState(0);
 
   // 모달 열린 시간 추적 (응답 시간 측정용)
   const [modalOpenTime, setModalOpenTime] = useState<number | null>(null);
@@ -126,8 +137,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         }) || [];
       });
 
-      // 현재 스코어카드를 AI에게 전달
-      const analysisResult = await analyzeIdea(userInput, historyStrings, level, personas, scorecard);
+      // 현재 스코어카드와 턴 수를 AI에게 전달
+      const analysisResult = await analyzeIdea(userInput, historyStrings, level, personas, scorecard, turnCount + 1);
 
       // Safety check for responses
       if (!analysisResult.responses || !Array.isArray(analysisResult.responses)) {
@@ -330,6 +341,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         isCustomInput,                                          // isCustomInput
         responseTimeSec                                         // responseTimeSec
       );
+
+      // 창업자 프로필 갱신 트리거
+      setDecisionRefreshTrigger(prev => prev + 1);
     }
 
     setModalOpenTime(null);
@@ -382,7 +396,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     const firstIdea = messages.find(m => m.isUser)?.text || "Startup Project";
     // Progressive Scorecard의 totalScore 사용 (기존 metrics.score 대신)
     const finalScore = scorecard.totalScore > 0 ? scorecard.totalScore : metrics?.score;
-    onComplete(fullConv, firstIdea, reflectedAdvice, finalScore);
+    // messages, scorecard, ideaCategory 추가 전달 (종합 결과물 생성용)
+    onComplete(fullConv, firstIdea, reflectedAdvice, finalScore, messages, scorecard, ideaCategory);
   };
 
   const getPersonaIcon = (role: string) => {
@@ -420,13 +435,63 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   const hasPendingReflections = pendingReflections.length > 0;
   const isLimitReached = turnCount >= FREE_TURNS;
 
+  // 첫 번째 사용자 아이디어 추출
+  const firstIdea = messages.find(m => m.isUser)?.text || '';
+
   return (
     <div className="flex h-full w-full bg-[#FAFAFA]">
+      {/* Left Sidebar - Insights Panel */}
+      <div className="w-56 lg:w-64 bg-white border-r border-gray-200 overflow-y-auto shrink-0 p-4 hidden md:block">
+        {/* 아이디어 요약 */}
+        {firstIdea && (
+          <div className="mb-6">
+            <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Idea Summary</h4>
+            <div className="p-3 bg-gray-50 rounded border border-gray-100">
+              <p className="text-xs text-gray-700 leading-relaxed break-keep line-clamp-4">
+                {firstIdea}
+              </p>
+            </div>
+          </div>
+        )}
+
+        {/* Key Insights */}
+        {metrics && (
+          <div className="space-y-5">
+            <div>
+              <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Strengths</h4>
+              <div className="space-y-2">
+                {metrics.keyStrengths.map((str, i) => (
+                  <div key={i} className="flex gap-2 text-xs text-gray-700">
+                    <Check size={12} className="text-green-500 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed break-keep">{str}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Risks</h4>
+              <div className="space-y-2">
+                {metrics.keyRisks.map((risk, i) => (
+                  <div key={i} className="flex gap-2 text-xs text-gray-700">
+                    <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                    <span className="leading-relaxed break-keep">{risk}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Decision Profile Card */}
+        <DecisionProfileCard compact className="mt-6" refreshTrigger={decisionRefreshTrigger} />
+      </div>
+
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative min-w-0">
         {/* Session Header */}
         <div className="flex items-center justify-center gap-2 py-3 text-[10px] border-b border-gray-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-sm border ${
+          <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${
             level === ValidationLevel.SKETCH ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
             level === ValidationLevel.DEFENSE ? 'bg-red-50 border-red-200 text-red-700' :
             'bg-white border-gray-200 text-gray-700'
@@ -450,14 +515,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
           {onBack && (
             <button
               onClick={onBack}
-              className="ml-2 px-2 py-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-sm transition-colors font-medium"
+              className="ml-2 px-2 py-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors font-medium"
             >
               변경
             </button>
           )}
           <button
             onClick={() => tutorial?.resetTutorial()}
-            className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-sm transition-colors"
+            className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
             title="튜토리얼 보기"
           >
             <HelpCircle size={14} />
@@ -479,7 +544,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
-                      <div className={`p-4 rounded-sm text-sm leading-relaxed shadow-sm break-keep
+                      <div className={`p-4 rounded text-sm leading-relaxed shadow-sm break-keep
                         ${msg.text?.startsWith('[종합 결정 사항]')
                             ? 'bg-black text-white border border-black'
                             : 'bg-white border border-gray-200 text-gray-900'
@@ -487,7 +552,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                         {msg.text}
                       </div>
                     </div>
-                    <div className="w-8 h-8 rounded-sm bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 mt-6">
+                    <div className="w-8 h-8 rounded bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 mt-6">
                       <span className="text-gray-500 text-xs font-bold">U</span>
                     </div>
                   </>
@@ -496,7 +561,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                   <>
                     {msg.responses && msg.responses[0].role === 'System' ? (
                       <>
-                        <div className="w-8 h-8 bg-black rounded-sm flex items-center justify-center shrink-0 mt-6">
+                        <div className="w-8 h-8 bg-black rounded flex items-center justify-center shrink-0 mt-6">
                           <span className="text-white font-bold text-xs">D</span>
                         </div>
                         <div className="max-w-[70%] space-y-1">
@@ -506,7 +571,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                               {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </div>
-                          <div className="p-4 bg-white border border-gray-200 rounded-sm text-sm text-gray-700 leading-relaxed break-keep shadow-sm">
+                          <div className="p-4 bg-white border border-gray-200 rounded text-sm text-gray-700 leading-relaxed break-keep shadow-sm">
                             {msg.responses[0].content}
                           </div>
                         </div>
@@ -514,7 +579,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                     ) : (
                       <div className="w-full">
                         <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 bg-black rounded-sm flex items-center justify-center">
+                          <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
                             <span className="text-white font-bold text-xs">D</span>
                           </div>
                           <span className="text-xs font-bold text-gray-900">Draft AI</span>
@@ -530,16 +595,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                                 msg.id, idx, resp.role, resp.content,
                                 resp.suggestedActions, resp.reflectedText, resp.perspectives
                               )}
-                              className={`relative flex flex-col items-start p-5 border transition-all duration-200 text-left group w-full h-full
+                              className={`relative flex flex-col items-start p-5 border transition-all duration-200 text-left group w-full min-h-[180px]
                                 ${resp.isReflected
-                                  ? 'bg-gray-50 border-gray-300 shadow-sm rounded-sm'
-                                  : 'bg-white border-gray-200 hover:border-black hover:shadow-sm rounded-sm'
+                                  ? 'bg-gray-50 border-gray-300 shadow-sm rounded'
+                                  : 'bg-white border-gray-200 hover:border-black hover:shadow-sm rounded'
                                 }
                               `}
                               style={{ animationDelay: `${idx * 100}ms` }}
                             >
                               {/* Persona Icon */}
-                              <div className={`w-9 h-9 border rounded-sm flex items-center justify-center mb-4 transition-colors
+                              <div className={`w-9 h-9 border rounded flex items-center justify-center mb-4 transition-colors
                                 ${resp.isReflected
                                   ? 'bg-gray-800 border-gray-800 text-white'
                                   : `${getPersonaColor(resp.role)} group-hover:bg-black group-hover:border-black group-hover:text-white`
@@ -552,13 +617,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                               <div className="flex items-center gap-2 mb-2 flex-wrap">
                                 <span className="font-bold text-sm text-gray-900">{resp.role}</span>
                                 {resp.perspectives && resp.perspectives.length > 0 && (
-                                  <div className="flex gap-1">
+                                  <span className="text-[10px] text-gray-400 font-mono">
                                     {resp.perspectives.slice(0, 3).map((p, pIdx) => (
-                                      <span key={pIdx} className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded font-mono">
-                                        {p.perspectiveLabel}
-                                      </span>
+                                      <span key={pIdx}>#{p.perspectiveLabel.replace(/\s+/g, '')} </span>
                                     ))}
-                                  </div>
+                                  </span>
                                 )}
                               </div>
 
@@ -569,7 +632,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
                               {/* Selected Badge */}
                               {resp.isReflected && (
-                                <div className="absolute top-4 right-4 w-5 h-5 bg-gray-800 rounded-sm flex items-center justify-center">
+                                <div className="absolute top-4 right-4 w-5 h-5 bg-gray-800 rounded flex items-center justify-center">
                                    <Check size={12} className="text-white" />
                                 </div>
                               )}
@@ -579,7 +642,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
                         {/* Next Step Button - shown below cards when this is the last message with reflections */}
                         {msg.id === lastMsg?.id && msg.responses?.some(r => r.isReflected) && (
-                          <div className="ml-10 mt-4 flex items-center justify-between p-3 bg-white border border-gray-200 rounded-sm" data-tutorial="next-step-button">
+                          <div className="ml-10 mt-4 flex items-center justify-between p-3 bg-white border border-gray-200 rounded" data-tutorial="next-step-button">
                             <div className="flex items-center gap-3">
                               <div className="text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wide">
                                 {msg.responses.filter(r => r.isReflected).length}개 조언 선택됨
@@ -588,7 +651,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                             <button
                               onClick={handleConsolidatedSend}
                               disabled={isTyping}
-                              className="bg-black hover:bg-gray-800 text-white px-5 py-2 rounded-sm font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50"
+                              className="bg-black hover:bg-gray-800 text-white px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50"
                             >
                               다음 단계
                               <ArrowRight size={14} />
@@ -617,9 +680,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         {isLimitReached && (
           <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
             <div className="max-w-4xl mx-auto relative">
-              <div className="w-full bg-gray-50 border border-gray-200 rounded-sm p-4 flex items-center justify-between">
+              <div className="w-full bg-gray-50 border border-gray-200 rounded p-4 flex items-center justify-between">
                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded-sm flex items-center justify-center text-gray-500">
+                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-gray-500">
                         <Lock size={14} />
                     </div>
                     <div className="text-sm">
@@ -629,7 +692,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                  </div>
                  <button
                     onClick={consumeTokenAndContinue}
-                    className="bg-black text-white px-4 py-2 rounded-sm text-xs font-bold hover:bg-gray-800 transition-colors"
+                    className="bg-black text-white px-4 py-2 rounded text-xs font-bold hover:bg-gray-800 transition-colors"
                  >
                     토큰 1개 사용 (잔여: {tokens})
                  </button>
@@ -645,7 +708,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
               {/* No metrics yet - show normal input */}
               {!metrics && (
                 <>
-                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
+                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
                     <input
                       type="text"
                       className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
@@ -658,7 +721,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                     <button
                       onClick={handleSend}
                       disabled={isTyping || !input.trim()}
-                      className={`p-2 rounded-sm transition-colors
+                      className={`p-2 rounded transition-colors
                         ${input.trim() && !isTyping
                           ? 'bg-black text-white hover:bg-gray-800'
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
@@ -675,7 +738,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
               {/* Has metrics but not in input mode - show thin status bar only */}
               {metrics && !showInputMode && (
-                <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-sm">
+                <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded">
                   <div className="flex items-center gap-4">
                     <div className="text-sm">
                       <span className="text-gray-500">현재 점수: </span>
@@ -687,13 +750,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setShowInputMode(true)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded-sm hover:bg-gray-100 transition-colors"
+                      className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-100 transition-colors"
                     >
                       계속 대화하기
                     </button>
                     <button
                       onClick={handleFinish}
-                      className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
+                      className="px-4 py-2 bg-black text-white text-xs font-bold rounded hover:bg-gray-800 transition-colors flex items-center gap-2"
                     >
                       검증 완료
                       <ArrowRight size={14} />
@@ -713,13 +776,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                     </div>
                     <button
                       onClick={handleFinish}
-                      className="px-3 py-1.5 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-1.5"
+                      className="px-3 py-1.5 bg-black text-white text-xs font-bold rounded hover:bg-gray-800 transition-colors flex items-center gap-1.5"
                     >
                       검증 완료
                       <ArrowRight size={12} />
                     </button>
                   </div>
-                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
+                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
                     <input
                       type="text"
                       className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
@@ -733,7 +796,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                     <button
                       onClick={handleSend}
                       disabled={isTyping || !input.trim()}
-                      className={`p-2 rounded-sm transition-colors
+                      className={`p-2 rounded transition-colors
                         ${input.trim() && !isTyping
                           ? 'bg-black text-white hover:bg-gray-800'
                           : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
@@ -752,12 +815,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         {isLimitReached && metrics && (
           <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
             <div className="max-w-4xl mx-auto">
-              <div className="bg-black text-white rounded-sm p-5 text-center">
+              <div className="bg-black text-white rounded p-5 text-center">
                 <div className="text-2xl font-black mb-2">{metrics.score}점</div>
                 <p className="text-sm text-gray-300 mb-4">10턴 검증이 완료되었습니다</p>
                 <button
                   onClick={handleFinish}
-                  className="px-6 py-3 bg-white text-black text-sm font-bold rounded-sm hover:bg-gray-100 transition-colors flex items-center gap-2 mx-auto"
+                  className="px-6 py-3 bg-white text-black text-sm font-bold rounded hover:bg-gray-100 transition-colors flex items-center gap-2 mx-auto"
                 >
                   결과 확인하기
                   <ArrowRight size={16} />
@@ -791,53 +854,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
          {scorecard.totalScore > 0 && (
            <button
              onClick={handleFinish}
-             className="w-full bg-black text-white py-2.5 rounded-sm text-xs font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2 mb-6"
+             className="w-full bg-black text-white py-2.5 rounded text-xs font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
            >
              전체 리포트 보기
              <ArrowRight size={14} />
            </button>
          )}
-
-         {/* Key Insights */}
-         {metrics && (
-             <div className="space-y-5">
-                 <div>
-                     <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Strengths</h4>
-                     <div className="space-y-1.5">
-                        {metrics.keyStrengths.map((str, i) => (
-                            <div key={i} className="flex gap-2 text-xs text-gray-700 bg-gray-50 p-2.5 rounded-sm border border-gray-100">
-                                <Check size={12} className="text-green-600 shrink-0 mt-0.5" />
-                                <span className="leading-relaxed break-keep">{str}</span>
-                            </div>
-                        ))}
-                     </div>
-                 </div>
-
-                 <div>
-                     <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Risks</h4>
-                     <div className="space-y-1.5">
-                        {metrics.keyRisks.map((risk, i) => (
-                            <div key={i} className="flex gap-2 text-xs text-gray-700 bg-red-50 p-2.5 rounded-sm border border-red-100">
-                                <AlertTriangle size={12} className="text-red-500 shrink-0 mt-0.5" />
-                                <span className="leading-relaxed break-keep">{risk}</span>
-                            </div>
-                        ))}
-                     </div>
-                 </div>
-             </div>
-         )}
-
-         {/* Decision Profile Card */}
-         <DecisionProfileCard compact className="mt-6" />
       </div>
 
       {/* Reflection Modal */}
       {reflectionModal && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-xl rounded-sm shadow-xl border border-gray-200 flex flex-col max-h-[85vh] overflow-hidden">
+          <div className="bg-white w-full max-w-xl rounded shadow-xl border border-gray-200 flex flex-col max-h-[85vh] overflow-hidden">
             <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between bg-white shrink-0">
               <div className="flex items-center gap-3">
-                 <div className="p-2 bg-gray-100 rounded-sm text-gray-700">
+                 <div className="p-2 bg-gray-100 rounded text-gray-700">
                     {getPersonaIcon(reflectionModal.role)}
                  </div>
                  <div>
@@ -847,7 +878,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
               </div>
               <button
                 onClick={closeReflectionModal}
-                className="text-gray-400 hover:text-gray-900 transition-colors p-1.5 rounded-sm hover:bg-gray-100"
+                className="text-gray-400 hover:text-gray-900 transition-colors p-1.5 rounded hover:bg-gray-100"
               >
                 <X size={18} />
               </button>
@@ -869,14 +900,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                            setReflectionModal(prev => prev ? { ...prev, selectedPerspectiveIdx: idx } : null);
                            setReflectionText(perspective.content);
                          }}
-                         className={`text-left p-4 rounded-sm border transition-all ${
+                         className={`text-left p-4 rounded border transition-all ${
                            reflectionModal.selectedPerspectiveIdx === idx
                              ? 'bg-gray-50 border-gray-300 shadow-sm'
                              : 'bg-white border-gray-200 hover:border-gray-400'
                          }`}
                        >
                          <div className="flex items-start gap-3">
-                           <div className={`mt-0.5 w-5 h-5 rounded-sm border-2 flex items-center justify-center shrink-0 ${
+                           <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
                              reflectionModal.selectedPerspectiveIdx === idx
                                ? 'border-gray-800 bg-gray-800'
                                : 'border-gray-300'
@@ -886,8 +917,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                            <div className="flex-1">
                              <div className="flex items-center gap-2 mb-1">
                                <span className="font-bold text-sm text-gray-900">{perspective.perspectiveLabel}</span>
-                               <span className="text-[9px] px-1.5 py-0.5 bg-gray-100 text-gray-500 rounded font-mono">
-                                 {perspective.perspectiveId}
+                               <span className="text-[10px] text-gray-400 font-mono">
+                                 #{perspective.perspectiveId}
                                </span>
                              </div>
                              <p className="text-xs text-gray-600 leading-relaxed break-keep mb-2">
@@ -913,7 +944,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                  <>
                    <div className="mb-5">
                      <label className="text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 block tracking-widest">Original</label>
-                     <div className="p-4 bg-gray-50 rounded-sm border border-gray-200 text-sm text-gray-700 leading-relaxed break-keep">
+                     <div className="p-4 bg-gray-50 rounded border border-gray-200 text-sm text-gray-700 leading-relaxed break-keep">
                        {reflectionModal.originalContent}
                      </div>
                    </div>
@@ -929,14 +960,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                            <button
                              key={idx}
                              onClick={() => setReflectionText(action)}
-                             className={`text-left p-3 rounded-sm border transition-all text-sm ${
+                             className={`text-left p-3 rounded border transition-all text-sm ${
                                reflectionText === action
                                  ? 'bg-gray-50 border-gray-300 shadow-sm text-gray-900'
                                  : 'bg-white border-gray-200 hover:border-gray-400 text-gray-600'
                              }`}
                            >
                              <div className="flex items-start gap-3">
-                               <div className={`mt-0.5 w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
+                               <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
                                  reflectionText === action ? 'border-gray-800 bg-gray-800' : 'border-gray-300'
                                }`}>
                                  {reflectionText === action && <Check size={10} className="text-white" />}
@@ -958,7 +989,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                 <textarea
                   value={reflectionText}
                   onChange={(e) => setReflectionText(e.target.value)}
-                  className="w-full h-24 p-4 bg-white border border-gray-200 rounded-sm text-gray-900 text-sm leading-relaxed focus:outline-none focus:border-black resize-none transition-all"
+                  className="w-full h-24 p-4 bg-white border border-gray-200 rounded text-gray-900 text-sm leading-relaxed focus:outline-none focus:border-black resize-none transition-all"
                   placeholder="선택한 관점의 조언을 수정하거나 직접 작성하세요..."
                 />
               </div>
@@ -977,7 +1008,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
               <button
                 onClick={saveReflectionLocally}
                 disabled={!reflectionText.trim()}
-                className="px-5 py-2 bg-black text-white font-bold rounded-sm hover:bg-gray-800 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+                className="px-5 py-2 bg-black text-white font-bold rounded hover:bg-gray-800 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {messages.find(m => m.id === reflectionModal.msgId)?.responses?.[reflectionModal.respIdx].isReflected ? '수정' : '확인'}
               </button>
