@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { Send, Cpu, Paintbrush, DollarSign, ArrowRight, Lightbulb, Check, MessageSquare, X, Edit3, Sparkles, MessageCircle, TrendingUp, AlertTriangle, ShieldCheck, Layers, Coins, Lock, Zap, Sword, MoreHorizontal, Megaphone, Scale, ClipboardList, Server, Calculator, User, Settings } from 'lucide-react';
+import { Send, Cpu, Paintbrush, DollarSign, ArrowRight, Lightbulb, Check, MessageSquare, X, Edit3, Sparkles, MessageCircle, TrendingUp, AlertTriangle, ShieldCheck, Layers, Coins, Lock, Zap, Sword, MoreHorizontal, Megaphone, Scale, ClipboardList, Server, Calculator, User, Settings, HelpCircle } from 'lucide-react';
 import { ChatMessage, AnalysisMetrics, ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PerspectiveAdvice } from './types';
 import { analyzeIdea } from './geminiService';
 import { useTutorialSafe } from './tutorial';
@@ -425,6 +425,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
               변경
             </button>
           )}
+          <button
+            onClick={() => tutorial?.resetTutorial()}
+            className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-sm transition-colors"
+            title="튜토리얼 보기"
+          >
+            <HelpCircle size={14} />
+          </button>
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide">
