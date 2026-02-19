@@ -645,71 +645,50 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                 </>
               )}
 
-              {/* Has metrics - show results preview or input */}
+              {/* Has metrics but not in input mode - show thin status bar only */}
               {metrics && !showInputMode && (
-                <div className="bg-gray-50 border border-gray-200 rounded-sm p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-black text-gray-900">{metrics.score}</div>
-                        <div className="text-[10px] text-gray-400 font-mono uppercase">점수</div>
-                      </div>
-                      <div className="h-10 w-px bg-gray-200" />
-                      <div className="text-sm text-gray-600">
-                        <span className="font-medium">{turnCount}/10</span> 턴 사용
-                      </div>
+                <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded-sm">
+                  <div className="flex items-center gap-4">
+                    <div className="text-sm">
+                      <span className="text-gray-500">현재 점수: </span>
+                      <span className="font-bold text-gray-900">{metrics.score}점</span>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setShowInputMode(true)}
-                        className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded-sm hover:bg-gray-100 transition-colors"
-                      >
-                        계속 대화하기
-                      </button>
-                      <button
-                        onClick={handleFinish}
-                        className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
-                      >
-                        검증 완료
-                        <ArrowRight size={14} />
-                      </button>
-                    </div>
+                    <span className="text-gray-300">|</span>
+                    <span className="text-sm text-gray-500">{turnCount}/10 턴</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="bg-white border border-gray-100 rounded-sm p-3 text-center">
-                      <div className="text-lg font-bold text-indigo-600">{metrics.developerScore}</div>
-                      <div className="text-[10px] text-gray-400">기술</div>
-                    </div>
-                    <div className="bg-white border border-gray-100 rounded-sm p-3 text-center">
-                      <div className="text-lg font-bold text-pink-600">{metrics.designerScore}</div>
-                      <div className="text-[10px] text-gray-400">디자인</div>
-                    </div>
-                    <div className="bg-white border border-gray-100 rounded-sm p-3 text-center">
-                      <div className="text-lg font-bold text-emerald-600">{metrics.vcScore}</div>
-                      <div className="text-[10px] text-gray-400">비즈니스</div>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Has metrics but input mode - show input with CTA */}
-              {metrics && showInputMode && (
-                <>
-                  <div className="flex items-center justify-between mb-3 p-3 bg-gray-50 border border-gray-200 rounded-sm">
-                    <div className="flex items-center gap-3">
-                      <div className="text-sm">
-                        <span className="text-gray-500">현재 점수: </span>
-                        <span className="font-bold text-gray-900">{metrics.score}점</span>
-                      </div>
-                      <span className="text-[10px] text-gray-400">|</span>
-                      <span className="text-[10px] text-gray-400">{turnCount}/10 턴</span>
-                    </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setShowInputMode(true)}
+                      className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded-sm hover:bg-gray-100 transition-colors"
+                    >
+                      계속 대화하기
+                    </button>
                     <button
                       onClick={handleFinish}
                       className="px-4 py-2 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-2"
                     >
                       검증 완료
                       <ArrowRight size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Has metrics and in input mode - show input with status */}
+              {metrics && showInputMode && (
+                <>
+                  <div className="flex items-center justify-between mb-3 px-1">
+                    <div className="flex items-center gap-3 text-xs text-gray-500">
+                      <span>현재 점수: <span className="font-bold text-gray-900">{metrics.score}점</span></span>
+                      <span className="text-gray-300">|</span>
+                      <span>{turnCount}/10 턴</span>
+                    </div>
+                    <button
+                      onClick={handleFinish}
+                      className="px-3 py-1.5 bg-black text-white text-xs font-bold rounded-sm hover:bg-gray-800 transition-colors flex items-center gap-1.5"
+                    >
+                      검증 완료
+                      <ArrowRight size={12} />
                     </button>
                   </div>
                   <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded-sm px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
@@ -721,6 +700,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
                       onChange={(e) => setInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
                       disabled={isTyping}
+                      autoFocus
                     />
                     <button
                       onClick={handleSend}
