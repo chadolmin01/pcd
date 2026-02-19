@@ -262,16 +262,16 @@ function generateBusinessPlanHtml(data: BusinessPlanData): string {
       <h2 class="section-title">1. 문제 정의</h2>
       <div class="section-content">
         <div class="field">
-          <div class="field-label">핵심 문제</div>
-          <div class="field-value">${escapeHtml(sectionData.problem.coreProblem)}</div>
+          <div class="field-label">시장 현황</div>
+          <div class="field-value">${escapeHtml(sectionData.problem.market_status)}</div>
         </div>
         <div class="field">
-          <div class="field-label">고객 페인포인트</div>
-          <div class="field-value">${escapeHtml(sectionData.problem.customerPain)}</div>
+          <div class="field-label">핵심 문제점</div>
+          <div class="field-value">${escapeHtml(sectionData.problem.problem_definition)}</div>
         </div>
         <div class="field">
-          <div class="field-label">시장 기회</div>
-          <div class="field-value">${escapeHtml(sectionData.problem.marketOpportunity)}</div>
+          <div class="field-label">개발 필요성</div>
+          <div class="field-value">${escapeHtml(sectionData.problem.development_necessity)}</div>
         </div>
       </div>
     </div>
@@ -281,20 +281,16 @@ function generateBusinessPlanHtml(data: BusinessPlanData): string {
       <h2 class="section-title">2. 솔루션</h2>
       <div class="section-content">
         <div class="field">
-          <div class="field-label">제품/서비스 개요</div>
-          <div class="field-value">${escapeHtml(sectionData.solution.productOverview)}</div>
-        </div>
-        <div class="field">
-          <div class="field-label">핵심 기능</div>
-          <div class="field-value">${escapeHtml(sectionData.solution.keyFeatures)}</div>
-        </div>
-        <div class="field">
-          <div class="field-label">기술 스택</div>
-          <div class="field-value">${escapeHtml(sectionData.solution.techStack)}</div>
+          <div class="field-label">개발 계획</div>
+          <div class="field-value">${escapeHtml(sectionData.solution.development_plan)}</div>
         </div>
         <div class="field">
           <div class="field-label">차별화 포인트</div>
           <div class="field-value">${escapeHtml(sectionData.solution.differentiation)}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">경쟁력 분석</div>
+          <div class="field-value">${escapeHtml(sectionData.solution.competitiveness)}</div>
         </div>
       </div>
     </div>
@@ -305,15 +301,15 @@ function generateBusinessPlanHtml(data: BusinessPlanData): string {
       <div class="section-content">
         <div class="field">
           <div class="field-label">비즈니스 모델</div>
-          <div class="field-value">${escapeHtml(sectionData.scaleup.businessModel)}</div>
+          <div class="field-value">${escapeHtml(sectionData.scaleup.business_model)}</div>
         </div>
         <div class="field">
-          <div class="field-label">고객 획득 전략</div>
-          <div class="field-value">${escapeHtml(sectionData.scaleup.customerAcquisition)}</div>
+          <div class="field-label">시장 규모</div>
+          <div class="field-value">${escapeHtml(sectionData.scaleup.market_size)}</div>
         </div>
         <div class="field">
-          <div class="field-label">성장 전략</div>
-          <div class="field-value">${escapeHtml(sectionData.scaleup.growthStrategy)}</div>
+          <div class="field-label">사업화 로드맵</div>
+          <div class="field-value">${escapeHtml(sectionData.scaleup.roadmap)}</div>
         </div>
       </div>
     </div>
@@ -323,12 +319,16 @@ function generateBusinessPlanHtml(data: BusinessPlanData): string {
       <h2 class="section-title">4. 팀 구성</h2>
       <div class="section-content">
         <div class="field">
-          <div class="field-label">창업 동기</div>
-          <div class="field-value">${escapeHtml(sectionData.team.founderMotivation)}</div>
+          <div class="field-label">대표자 프로필</div>
+          <div class="field-value">${escapeHtml(sectionData.team.founder)}</div>
         </div>
         <div class="field">
-          <div class="field-label">팀 역량</div>
-          <div class="field-value">${escapeHtml(sectionData.team.teamCapability)}</div>
+          <div class="field-label">팀 구성원</div>
+          <div class="field-value">${escapeHtml(sectionData.team.team_members)}</div>
+        </div>
+        <div class="field">
+          <div class="field-label">팀 시너지</div>
+          <div class="field-value">${escapeHtml(sectionData.team.team_synergy)}</div>
         </div>
       </div>
     </div>
@@ -341,19 +341,19 @@ function generateBusinessPlanHtml(data: BusinessPlanData): string {
         <table>
           <thead>
             <tr>
-              <th>단계</th>
+              <th>No</th>
+              <th>개발 내용</th>
               <th>기간</th>
-              <th>내용</th>
-              <th>담당자</th>
+              <th>상세 내용</th>
             </tr>
           </thead>
           <tbody>
             ${schedule.map(item => `
               <tr>
-                <td>${escapeHtml(item.phase)}</td>
-                <td>${escapeHtml(item.period)}</td>
+                <td>${escapeHtml(item.no)}</td>
                 <td>${escapeHtml(item.content)}</td>
-                <td>${escapeHtml(item.assignee)}</td>
+                <td>${escapeHtml(item.period)}</td>
+                <td>${escapeHtml(item.detail)}</td>
               </tr>
             `).join('')}
           </tbody>
@@ -370,19 +370,17 @@ function generateBusinessPlanHtml(data: BusinessPlanData): string {
         <table>
           <thead>
             <tr>
-              <th>항목</th>
-              <th>내용</th>
+              <th>비용 항목</th>
+              <th>상세 내용</th>
               <th>금액</th>
-              <th>비고</th>
             </tr>
           </thead>
           <tbody>
             ${budget.map(item => `
               <tr>
                 <td>${escapeHtml(item.category)}</td>
-                <td>${escapeHtml(item.item)}</td>
-                <td>${item.amount.toLocaleString()}만원</td>
-                <td>${escapeHtml(item.note || '')}</td>
+                <td>${escapeHtml(item.detail)}</td>
+                <td>${escapeHtml(item.amount)}</td>
               </tr>
             `).join('')}
           </tbody>
