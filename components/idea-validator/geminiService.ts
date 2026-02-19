@@ -1,4 +1,4 @@
-import { AnalysisResult, Artifacts, ValidationLevel, PersonaRole, DEFAULT_PERSONAS } from "./types";
+import { AnalysisResult, Artifacts, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, Scorecard, createEmptyScorecard } from "./types";
 
 // 레벨 변환 (프론트엔드 enum -> 백엔드 string)
 const convertLevel = (level: ValidationLevel): string => {
@@ -17,7 +17,8 @@ export const analyzeIdea = async (
   idea: string,
   conversationHistory: string[] = [],
   level: ValidationLevel = ValidationLevel.MVP,
-  personas: PersonaRole[] = DEFAULT_PERSONAS
+  personas: PersonaRole[] = DEFAULT_PERSONAS,
+  currentScorecard: Scorecard | null = null
 ): Promise<AnalysisResult> => {
   try {
     const backendLevel = convertLevel(level);
@@ -29,7 +30,8 @@ export const analyzeIdea = async (
         idea,
         conversationHistory,
         level: backendLevel,
-        personas
+        personas,
+        currentScorecard
       })
     });
 
@@ -65,7 +67,9 @@ export const analyzeIdea = async (
         keyRisks: ["분석 실패"],
         keyStrengths: [],
         summary: "데이터를 불러오지 못했습니다."
-      }
+      },
+      scorecard: createEmptyScorecard(),
+      categoryUpdates: []
     };
   }
 };

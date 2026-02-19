@@ -102,7 +102,19 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
           </div>
         );
       case AppState.SELECTION:
-        return <SelectionScreen onSelect={handleSelection} skipToLevelSelect={true} onBack={onBack} userEmail={userData?.email} />;
+        return (
+          <SelectionScreen
+            onSelect={handleSelection}
+            skipToLevelSelect={true}
+            onBack={() => {
+              // 로그아웃: userData 초기화 후 온보딩 화면으로 이동
+              setUserData(null);
+              setView(AppState.ONBOARDING);
+              toast.info('로그아웃 되었습니다');
+            }}
+            userEmail={userData?.email}
+          />
+        );
       case AppState.CHAT:
         return (
           <div className="h-full w-full animate-in fade-in duration-500">

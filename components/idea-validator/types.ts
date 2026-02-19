@@ -155,6 +155,8 @@ export interface AnalysisResult {
   responses: PersonaResponse[];
   metrics: AnalysisMetrics;
   ideaCategory?: string;  // AI가 분류한 아이디어 카테고리 (핀테크, 헬스케어 등)
+  scorecard?: Scorecard;           // Progressive scorecard (신규)
+  categoryUpdates?: CategoryUpdate[]; // 이번 턴의 점수 변동 내역 (신규)
 }
 
 export interface ChatMessage {
@@ -234,4 +236,138 @@ export enum ValidationLevel {
   SKETCH = 'SKETCH',   // Level 1: Idea Sketch (Fast/Beginner)
   MVP = 'MVP',         // Level 2: MVP Building (Standard)
   DEFENSE = 'DEFENSE', // Level 3: Investor Defense (Pro/Hardcore)
+}
+
+// ============================================
+// Progressive Scorecard System
+// ============================================
+
+export type ScorecardCategory =
+  | 'problemDefinition'
+  | 'solution'
+  | 'marketAnalysis'
+  | 'revenueModel'
+  | 'differentiation'
+  | 'logicalConsistency'
+  | 'feasibility'
+  | 'feedbackReflection';
+
+export interface CategoryScore {
+  current: number;  // 현재 점수
+  max: number;      // 최대 점수
+  filled: boolean;  // 0보다 큰지 여부
+}
+
+export interface Scorecard {
+  problemDefinition: CategoryScore;
+  solution: CategoryScore;
+  marketAnalysis: CategoryScore;
+  revenueModel: CategoryScore;
+  differentiation: CategoryScore;
+  logicalConsistency: CategoryScore;
+  feasibility: CategoryScore;
+  feedbackReflection: CategoryScore;
+  totalScore: number;
+}
+
+export interface CategoryUpdate {
+  category: ScorecardCategory;
+  delta: number;    // 증가 점수 (양수만)
+  reason: string;   // 한글 설명
+}
+
+// 카테고리 메타데이터
+export const SCORECARD_CATEGORIES: Record<ScorecardCategory, { nameKo: string; max: number; description: string }> = {
+  problemDefinition: { nameKo: '문제 정의', max: 15, description: '해결하려는 문제의 명확성' },
+  solution: { nameKo: '솔루션', max: 15, description: '제안하는 해결책의 구체성' },
+  marketAnalysis: { nameKo: '시장 분석', max: 10, description: '타겟 시장과 경쟁 환경' },
+  revenueModel: { nameKo: '수익 모델', max: 10, description: '수익화 전략의 현실성' },
+  differentiation: { nameKo: '차별화', max: 10, description: '경쟁 대비 차별점' },
+  logicalConsistency: { nameKo: '논리 일관성', max: 15, description: '전체 스토리의 논리성' },
+  feasibility: { nameKo: '실현 가능성', max: 15, description: '기술/자원 제약 내 실현성' },
+  feedbackReflection: { nameKo: '피드백 반영', max: 10, description: '전문가 조언 수용 및 개선' },
+};
+
+// 빈 스코어카드 생성 함수
+export function createEmptyScorecard(): Scorecard {
+  return {
+    problemDefinition: { current: 0, max: 15, filled: false },
+    solution: { current: 0, max: 15, filled: false },
+    marketAnalysis: { current: 0, max: 10, filled: false },
+    revenueModel: { current: 0, max: 10, filled: false },
+    differentiation: { current: 0, max: 10, filled: false },
+    logicalConsistency: { current: 0, max: 15, filled: false },
+    feasibility: { current: 0, max: 15, filled: false },
+    feedbackReflection: { current: 0, max: 10, filled: false },
+    totalScore: 0,
+  };
+}
+
+// 마일스톤 시스템
+export interface LevelRequirement {
+  totalScore: number;
+  minimumPerCategory: Partial<Record<ScorecardCategory, number>>;
+}
+
+export const LEVEL_REQUIREMENTS: Record<'sketch' | 'mvp' | 'defense', LevelRequirement> = {
+  sketch: {
+    totalScore: 40,
+    minimumPerCategory: {
+      problemDefinition: 5,
+      solution: 5
+    }
+  },
+  mvp: {
+    totalScore: 65,
+    minimumPerCategory: {
+      problemDefinition: 4,
+      solution: 4,
+      marketAnalysis: 4,
+      revenueModel: 4,
+      differentiation: 4,
+      logicalConsistency: 4,
+      feasibility: 4,
+      feedbackReflection: 4
+    }
+  },
+  defense: {
+    totalScore: 85,
+    minimumPerCategory: {
+      problemDefinition: 7,
+      solution: 7,
+      marketAnalysis: 7,
+      revenueModel: 7,
+      differentiation: 7,
+      logicalConsistency: 7,
+      feasibility: 7,
+      feedbackReflection: 7
+    }
+  }
+};
+
+// 레벨 달성 여부 체크 함수
+export function checkLevelEligibility(
+  scorecard: Scorecard,
+  level: 'sketch' | 'mvp' | 'defense'
+): {
+  eligible: boolean;
+  totalPassed: boolean;
+  failingCategories: ScorecardCategory[];
+} {
+  const req = LEVEL_REQUIREMENTS[level];
+  const totalPassed = scorecard.totalScore >= req.totalScore;
+
+  const failingCategories: ScorecardCategory[] = [];
+  Object.entries(req.minimumPerCategory).forEach(([cat, min]) => {
+    const category = cat as ScorecardCategory;
+    if (scorecard[category].current < (min as number)) {
+      failingCategories.push(category);
+    }
+  });
+
+  return {
+    eligible: totalPassed && failingCategories.length === 0,
+    totalPassed,
+    failingCategories
+  };
 }
