@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { withRateLimit } from '@/src/lib/rate-limit';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -131,7 +132,8 @@ function buildPrompt(idea: string, historyContext: string, personas: string[]) {
 }`;
 }
 
-export async function POST(request: NextRequest) {
+// withRateLimit HOF 적용 - AI 엔드포인트로 더 엄격한 제한
+export const POST = withRateLimit(async (request: NextRequest) => {
   try {
     const { idea, conversationHistory = [], level = 'mvp', personas = ['Developer', 'Designer', 'VC'] } = await request.json();
 
@@ -173,4 +175,4 @@ export async function POST(request: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, { isAI: true });

@@ -6,6 +6,8 @@ export interface PersonaPreset {
   name: string;
   nameKo: string;
   description: string;
+  detailDescription: string; // 모달용 상세 설명
+  checkPoints: string[]; // 검토 포인트 목록
   icon: string; // lucide icon name
   color: string; // tailwind color classes
 }
@@ -16,95 +18,127 @@ export const PERSONA_PRESETS: PersonaPreset[] = [
     name: 'Developer',
     nameKo: '개발자',
     description: '기술적 실현 가능성, 아키텍처, 개발 비용을 검토합니다.',
+    detailDescription: '시니어 풀스택 개발자의 관점에서 아이디어를 분석합니다. 기술 스택 선택, 시스템 아키텍처, MVP 개발 범위, 기술 부채 등을 종합적으로 검토하여 실현 가능한 개발 계획을 제시합니다.',
+    checkPoints: ['기술 스택 적합성', '개발 복잡도 예측', 'MVP 범위 설정', '확장성 고려', '기술 부채 리스크'],
     icon: 'Cpu',
-    color: 'bg-blue-50 text-blue-600 border-blue-200',
+    color: 'bg-sky-50 text-sky-700 border-sky-200',
   },
   {
     id: 'Designer',
     name: 'Designer',
     nameKo: '디자이너',
     description: 'UX/UI, 사용자 경험, 브랜드 일관성을 검토합니다.',
+    detailDescription: '프로덕트 디자이너의 관점에서 사용자 경험을 분석합니다. 사용자 여정, 인터페이스 설계, 접근성, 브랜드 아이덴티티를 고려하여 사용자 중심의 제품 설계 방향을 제안합니다.',
+    checkPoints: ['사용자 여정 설계', 'UI/UX 복잡도', '접근성 고려', '브랜드 일관성', '경쟁 서비스 대비 차별점'],
     icon: 'Paintbrush',
-    color: 'bg-pink-50 text-pink-600 border-pink-200',
+    color: 'bg-rose-50 text-rose-700 border-rose-200',
   },
   {
     id: 'VC',
     name: 'VC',
     nameKo: '투자자',
     description: '시장성, 수익 모델, 성장 잠재력을 검토합니다.',
+    detailDescription: '벤처캐피탈 파트너의 관점에서 투자 매력도를 분석합니다. 시장 규모, 경쟁 환경, 수익 모델의 지속 가능성, 팀 역량, 성장 잠재력을 종합적으로 평가합니다.',
+    checkPoints: ['TAM/SAM/SOM 분석', '경쟁 우위 확보', '수익 모델 검증', '스케일업 가능성', '투자 회수 시나리오'],
     icon: 'DollarSign',
-    color: 'bg-emerald-50 text-emerald-600 border-emerald-200',
+    color: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   },
   {
     id: 'Marketer',
     name: 'Marketer',
     nameKo: '마케터',
     description: 'GTM 전략, 고객 획득, 브랜딩을 검토합니다.',
+    detailDescription: '그로스 마케터의 관점에서 시장 진입 전략을 분석합니다. 타겟 고객 정의, 고객 획득 채널, CAC/LTV 예측, 바이럴 가능성을 검토하여 효과적인 마케팅 전략을 제안합니다.',
+    checkPoints: ['타겟 고객 명확성', 'CAC/LTV 예측', '채널 전략', '바이럴 포인트', '브랜드 포지셔닝'],
     icon: 'Megaphone',
-    color: 'bg-orange-50 text-orange-600 border-orange-200',
+    color: 'bg-amber-50 text-amber-700 border-amber-200',
   },
   {
     id: 'Legal',
     name: 'Legal',
     nameKo: '법률 전문가',
     description: '규제, 컴플라이언스, 법적 리스크를 검토합니다.',
+    detailDescription: '스타트업 전문 변호사의 관점에서 법적 리스크를 분석합니다. 개인정보보호, 산업 규제, 지적재산권, 계약 관계 등 법적 쟁점을 사전에 파악하여 리스크를 최소화합니다.',
+    checkPoints: ['개인정보보호법 준수', '산업별 규제 확인', '지적재산권 보호', '이용약관 설계', '책임 제한 조항'],
     icon: 'Scale',
-    color: 'bg-slate-50 text-slate-600 border-slate-200',
+    color: 'bg-slate-100 text-slate-600 border-slate-200',
   },
   {
     id: 'PM',
     name: 'PM',
     nameKo: '프로덕트 매니저',
     description: '제품 로드맵, 우선순위, 사용자 니즈를 검토합니다.',
+    detailDescription: '시니어 PM의 관점에서 제품 전략을 분석합니다. 사용자 문제 정의, 기능 우선순위, 로드맵 설계, 성공 지표 정의를 통해 제품의 방향성을 명확히 합니다.',
+    checkPoints: ['문제-해결 적합성', '기능 우선순위', 'MVP 정의', '성공 지표(KPI)', '로드맵 타당성'],
     icon: 'ClipboardList',
-    color: 'bg-violet-50 text-violet-600 border-violet-200',
+    color: 'bg-violet-50 text-violet-700 border-violet-200',
   },
   {
     id: 'CTO',
     name: 'CTO',
     nameKo: 'CTO',
     description: '기술 전략, 확장성, 보안을 검토합니다.',
+    detailDescription: '스타트업 CTO의 관점에서 기술 전략을 분석합니다. 기술 선택의 장기적 영향, 팀 빌딩 전략, 보안 아키텍처, 인프라 확장성을 고려한 기술 로드맵을 제시합니다.',
+    checkPoints: ['기술 스택 장기 전략', '보안 아키텍처', '확장성 설계', '기술 팀 빌딩', '기술 부채 관리'],
     icon: 'Server',
-    color: 'bg-cyan-50 text-cyan-600 border-cyan-200',
+    color: 'bg-indigo-50 text-indigo-700 border-indigo-200',
   },
   {
     id: 'CFO',
     name: 'CFO',
     nameKo: 'CFO',
     description: '재무 모델, 번레이트, 수익성을 검토합니다.',
+    detailDescription: '스타트업 CFO의 관점에서 재무 건전성을 분석합니다. 초기 비용 구조, 번레이트 예측, 손익분기점, 자금 조달 전략을 검토하여 지속 가능한 재무 계획을 수립합니다.',
+    checkPoints: ['초기 비용 추정', '번레이트 예측', '손익분기점 분석', '자금 조달 시나리오', '유닛 이코노믹스'],
     icon: 'Calculator',
-    color: 'bg-amber-50 text-amber-600 border-amber-200',
+    color: 'bg-lime-50 text-lime-700 border-lime-200',
   },
   {
     id: 'EndUser',
     name: 'End User',
     nameKo: '최종 사용자',
     description: '실제 사용자 관점에서 편의성과 가치를 검토합니다.',
+    detailDescription: '실제 타겟 사용자의 관점에서 제품 가치를 분석합니다. 일상에서의 사용 시나리오, 기존 솔루션 대비 장점, 지불 의향, 추천 가능성을 현실적으로 평가합니다.',
+    checkPoints: ['실제 사용 시나리오', '기존 대안 비교', '지불 의향(WTP)', '추천 의향(NPS)', '습관 형성 가능성'],
     icon: 'User',
-    color: 'bg-teal-50 text-teal-600 border-teal-200',
+    color: 'bg-teal-50 text-teal-700 border-teal-200',
   },
   {
     id: 'Operations',
     name: 'Operations',
     nameKo: '운영 전문가',
     description: '운영 효율성, 프로세스, 확장 가능성을 검토합니다.',
+    detailDescription: 'COO의 관점에서 운영 가능성을 분석합니다. 일상 운영 프로세스, 고객 지원 체계, 파트너십 관리, 품질 관리 시스템을 검토하여 효율적인 운영 체계를 설계합니다.',
+    checkPoints: ['운영 프로세스 설계', '고객 지원 체계', '품질 관리 시스템', '파트너십 관리', '운영 확장성'],
     icon: 'Settings',
-    color: 'bg-gray-50 text-gray-600 border-gray-200',
+    color: 'bg-stone-100 text-stone-600 border-stone-200',
   },
 ];
 
 // 기본 선택 페르소나
 export const DEFAULT_PERSONAS: PersonaRole[] = ['Developer', 'Designer', 'VC'];
 
+// 서브 관점별 조언
+export interface PerspectiveAdvice {
+  perspectiveId: string;      // 관점 ID (e.g., 'security', 'speed')
+  perspectiveLabel: string;   // 관점 라벨 (e.g., '보안', '개발속도')
+  content: string;            // 해당 관점에서의 조언
+  suggestedActions?: string[]; // 구체적인 실행 방안
+  isReflected?: boolean;      // 이 조언을 선택했는지
+  reflectedText?: string;     // 사용자가 작성한 결정
+}
+
 export interface PersonaResponse {
   role: PersonaRole;
   name: string;
   avatar: string;
-  content: string;
+  content: string;            // 기존 호환성을 위해 유지 (첫 번째 조언 또는 요약)
   tone: 'Critical' | 'Skeptical' | 'Analytical' | 'Neutral' | 'Supportive'; // Added Supportive for Level 1
   suggestedActions?: string[]; // AI provided actionable options
   isReflected?: boolean; // Tracks if user accepted this advice
   reflectedText?: string; // The actual text the user decided to reflect (editable)
+  // 새로운 필드: 서브 관점별 조언
+  perspectives?: PerspectiveAdvice[];  // AI가 선택한 3개 관점별 조언
 }
 
 export interface AnalysisMetrics {
@@ -120,6 +154,7 @@ export interface AnalysisMetrics {
 export interface AnalysisResult {
   responses: PersonaResponse[];
   metrics: AnalysisMetrics;
+  ideaCategory?: string;  // AI가 분류한 아이디어 카테고리 (핀테크, 헬스케어 등)
 }
 
 export interface ChatMessage {
@@ -182,9 +217,17 @@ export interface Artifacts {
 }
 
 export enum AppState {
+  ONBOARDING = 'ONBOARDING',
   SELECTION = 'SELECTION',
   CHAT = 'CHAT',
   RESULT = 'RESULT',
+}
+
+export interface OnboardingData {
+  name: string;
+  organization: string;
+  email: string;
+  privacyConsent: boolean;
 }
 
 export enum ValidationLevel {

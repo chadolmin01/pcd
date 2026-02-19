@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
+import OnboardingScreen from './OnboardingScreen';
 import SelectionScreen from './SelectionScreen';
 import ChatInterface from './ChatInterface';
 import ResultView from './ResultView';
-import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS } from './types';
+import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData } from './types';
 import { validationResultsStore } from '@/src/lib/validationResultsStore';
 import { toast } from 'sonner';
+import { useUsage } from '@/src/hooks/useUsage';
 
 interface IdeaValidatorProps {
   onClose?: () => void;
@@ -22,12 +24,22 @@ interface IdeaValidatorProps {
 }
 
 const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embedded = false, skipToLevelSelect = false, onBack, externalInput, onExternalInputChange, hideInput = false, onRegisterSend }) => {
-  const [view, setView] = useState<AppState>(AppState.SELECTION);
+  const [view, setView] = useState<AppState>(AppState.ONBOARDING);
   const [conversationHistory, setConversationHistory] = useState<string>('');
   const [projectIdea, setProjectIdea] = useState<string>('');
   const [reflectedAdvice, setReflectedAdvice] = useState<string[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<ValidationLevel>(ValidationLevel.MVP);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaRole[]>(DEFAULT_PERSONAS);
+  const [userData, setUserData] = useState<OnboardingData | null>(null);
+
+  // Usage tracking
+  const { recordUsage } = useUsage(userData?.email || null);
+
+  const handleOnboardingComplete = (data: OnboardingData) => {
+    setUserData(data);
+    setView(AppState.SELECTION);
+    toast.success(`${data.name}님, 환영합니다!`);
+  };
 
   const handleSelection = (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[]) => {
     if (mode === 'ai') {
@@ -45,7 +57,7 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
 
   const [savedResultId, setSavedResultId] = useState<string | null>(null);
 
-  const handleChatComplete = async (history: string, idea: string, advice: string[]) => {
+  const handleChatComplete = async (history: string, idea: string, advice: string[], score?: number) => {
     setConversationHistory(history);
     setProjectIdea(idea);
     setReflectedAdvice(advice);
@@ -59,6 +71,11 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
         reflectedAdvice: advice,
       });
       setSavedResultId(savedResult.id);
+
+      // Record usage for this level
+      const levelKey = selectedLevel.toLowerCase() as 'sketch' | 'mvp' | 'defense';
+      await recordUsage(levelKey, score, savedResult.id);
+
       toast.success('검증 결과가 저장되었습니다');
     } catch (error) {
       console.error('Failed to save validation result:', error);
@@ -78,8 +95,14 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
 
   const renderView = () => {
     switch (view) {
+      case AppState.ONBOARDING:
+        return (
+          <div className="h-full w-full animate-in fade-in duration-500">
+            <OnboardingScreen onComplete={handleOnboardingComplete} />
+          </div>
+        );
       case AppState.SELECTION:
-        return <SelectionScreen onSelect={handleSelection} skipToLevelSelect={skipToLevelSelect} onBack={onBack} />;
+        return <SelectionScreen onSelect={handleSelection} skipToLevelSelect={true} onBack={onBack} userEmail={userData?.email} />;
       case AppState.CHAT:
         return (
           <div className="h-full w-full animate-in fade-in duration-500">
@@ -91,6 +114,7 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
               onExternalInputChange={onExternalInputChange}
               hideInput={hideInput}
               onRegisterSend={onRegisterSend}
+              onBack={() => setView(AppState.SELECTION)}
             />
           </div>
         );
@@ -112,8 +136,8 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
 
   return (
     <div className="h-full flex flex-col font-sans text-draft-black selection:bg-blue-100 selection:text-blue-900 bg-white overflow-hidden">
-      {/* Top Navigation Bar - Hidden when embedded */}
-      {!embedded && (
+      {/* Top Navigation Bar - Hidden when embedded or on onboarding screen */}
+      {!embedded && view !== AppState.ONBOARDING && (
         <nav className="w-full h-12 border-b border-gray-200 bg-white flex shrink-0 items-center justify-between px-4 z-50">
           <div className="flex items-center cursor-pointer gap-2" onClick={() => setView(AppState.SELECTION)}>
             <div className="bg-draft-black text-white px-1.5 py-0.5 font-mono font-bold text-sm rounded-sm">D</div>
@@ -128,7 +152,7 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
             {onClose && (
               <button
                 onClick={onClose}
-                className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-gray-100 transition-colors text-gray-500"
+                className="w-7 h-7 flex items-center justify-center rounded-sm hover:bg-gray-100 transition-colors text-gray-500"
               >
                 ✕
               </button>
