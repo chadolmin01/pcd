@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { withRateLimit } from '@/src/lib/rate-limit';
+import { getKnowledgeBaseForPrompt, getFullKnowledgeBase } from '@/lib/knowledge-base/startup-criteria';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -142,10 +143,26 @@ function getAnalyzeSystemInstruction(level: string, personas: string[]) {
     .filter(Boolean)
     .join('\n      ');
 
+  // 페르소나별 Knowledge Base 추가
+  const personaKnowledge = personas
+    .map(p => getKnowledgeBaseForPrompt(p))
+    .join('\n');
+
   const baseInstruction = `당신은 "Draft." 스타트업 아이디어 검증 엔진입니다. 사용자가 아이디어를 입력하면 선택된 ${personas.length}가지 페르소나로 응답합니다. 한국어로 응답하십시오.
 
 선택된 페르소나:
-      ${personaDescriptions}`;
+      ${personaDescriptions}
+
+${getFullKnowledgeBase()}
+
+**[페르소나별 심화 지식]**
+${personaKnowledge}
+
+**[Knowledge Base 활용 규칙]**
+1. 레드플래그 발견 시 → 즉시 지적하고 개선 방향 제시
+2. 성공 패턴과 유사하면 → 해당 사례 언급하며 격려
+3. 투자자 질문 중 답변 안 된 것 → 자연스럽게 유도
+4. 시장/수익 숫자 언급 시 → VC 기준과 비교 평가`;
 
   if (level === 'sketch') {
     return `${baseInstruction}
@@ -153,21 +170,24 @@ function getAnalyzeSystemInstruction(level: string, personas: string[]) {
     **[Level 1: 아이디어 스케치 단계]**
     - 목표: 창업자가 아이디어를 구체화하도록 돕고 동기를 부여합니다.
     - 태도: 친절하고, 협력적이며, 이해하기 쉬운 언어를 사용하세요.
-    - 제약: 답변을 짧고 명료하게(3문장 이내) 유지하세요. 어려운 전문 용어 사용을 지양하세요.`;
+    - 제약: 답변을 짧고 명료하게(3문장 이내) 유지하세요. 어려운 전문 용어 사용을 지양하세요.
+    - Knowledge Base: 레드플래그는 부드럽게 언급, 성공 사례는 동기부여용으로 활용`;
   } else if (level === 'investor') {
     return `${baseInstruction}
 
     **[Level 3: 투자자 방어(Hardcore) 단계]**
     - 목표: 창업자의 논리를 극한까지 검증하고 약점을 파고듭니다.
     - 태도: 매우 냉소적이고, 비판적이며, 전문적인 용어를 사용하세요. 봐주지 마세요.
-    - 제약: 창업자가 논리적으로 방어하지 못하면 점수를 낮게 책정하세요.`;
+    - 제약: 창업자가 논리적으로 방어하지 못하면 점수를 낮게 책정하세요.
+    - Knowledge Base: VC 기준 엄격 적용, 투자자 질문 7개 모두 검증, 레드플래그 즉시 지적`;
   } else {
     return `${baseInstruction}
 
     **[Level 2: MVP 빌딩 단계]**
     - 목표: 현실적인 제품 출시를 위해 불필요한 기능을 덜어냅니다.
     - 태도: 논리적이고, 현실적이며, 실무 중심적입니다.
-    - 제약: 현실적인 제약을 근거로 피드백을 제공하세요.`;
+    - 제약: 현실적인 제약을 근거로 피드백을 제공하세요.
+    - Knowledge Base: 성공 사례의 MVP 전략 참고, 레드플래그는 건설적으로 지적`;
   }
 }
 
