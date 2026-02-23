@@ -27,7 +27,7 @@ export interface LandingPageOutput {
 }
 
 export function generateLandingPage(data: BusinessPlanData): LandingPageOutput {
-  const { basicInfo, sectionData, scorecard, validationScore } = data;
+  const { basicInfo, validationScore } = data;
 
   // 콘텐츠 기획서 생성 (generate-content.md 형식)
   const contentMd = generateContentMd(data);

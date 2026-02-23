@@ -23,7 +23,7 @@ interface IdeaValidatorProps {
   onRegisterSend?: (sendFn: () => void) => void;
 }
 
-const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embedded = false, skipToLevelSelect = false, onBack, externalInput, onExternalInputChange, hideInput = false, onRegisterSend }) => {
+const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embedded = false, skipToLevelSelect: _skipToLevelSelect = false, onBack: _onBack, externalInput, onExternalInputChange, hideInput = false, onRegisterSend }) => {
   const [view, setView] = useState<AppState>(AppState.ONBOARDING);
   const [conversationHistory, setConversationHistory] = useState<string>('');
   const [projectIdea, setProjectIdea] = useState<string>('');

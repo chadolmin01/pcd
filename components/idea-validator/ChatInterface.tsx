@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowRight, Check, AlertTriangle, Layers, Lock, Zap, Sword, HelpCircle } from 'lucide-react';
 import { ChatMessage, AnalysisMetrics, ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PerspectiveAdvice, Scorecard, CategoryUpdate, createEmptyScorecard, ScorecardCategory } from './types';
 import { analyzeIdea } from './geminiService';
 import { useTutorialSafe } from './tutorial';
-import { saveDecisionBatch, startNewSession, getCurrentRound, incrementRound, getCurrentSessionId } from './decisionAnalyzer';
+import { saveDecisionBatch, startNewSession, incrementRound, getCurrentSessionId } from './decisionAnalyzer';
 import DecisionProfileCard from './DecisionProfileCard';
 import ScorecardPanel from './ScorecardPanel';
 import ReflectionModal, { ReflectionModalState } from './ReflectionModal';

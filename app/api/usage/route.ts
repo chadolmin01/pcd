@@ -119,7 +119,7 @@ export const GET = withRateLimit(async (request: NextRequest) => {
 // POST: 사용량 기록
 export const POST = withRateLimit(async (request: NextRequest) => {
   try {
-    const { email, level, score, validationId } = await request.json();
+    const { email, level, score, validationId: _validationId } = await request.json();
 
     if (!email || !level) {
       return NextResponse.json(

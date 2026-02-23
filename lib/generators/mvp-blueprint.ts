@@ -176,7 +176,7 @@ function recommendTechStack(industry: string): TechStackRecommendation[] {
   return baseStack;
 }
 
-function generateRoadmap(schedule: BusinessPlanData['schedule'], roadmapText: string): RoadmapPhase[] {
+function generateRoadmap(schedule: BusinessPlanData['schedule'], _roadmapText: string): RoadmapPhase[] {
   // 스케줄 데이터가 있으면 활용
   if (schedule.length > 0) {
     return schedule.map((item, index) => ({

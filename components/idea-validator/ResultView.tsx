@@ -10,7 +10,6 @@ import DecisionProfileCard from './DecisionProfileCard';
 // Import split components
 import {
   ValidationScoresCard,
-  calculateValidationScores,
   ActionCard,
   PrdView,
   JdView,
@@ -158,7 +157,6 @@ const ResultView: React.FC<ResultViewProps> = ({
     );
   }
 
-  const scores = calculateValidationScores(scorecard, artifacts?.personaScores);
   const actionPlan = artifacts?.actionPlan || { developer: [], designer: [], vc: [] };
 
   return (

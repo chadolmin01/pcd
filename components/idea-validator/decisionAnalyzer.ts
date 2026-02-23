@@ -238,11 +238,6 @@ export function calculateAxisScores(records: DecisionRecord[]): AxisScores {
   });
 
   // 정규화 (-1 ~ +1 범위로)
-  const maxAbsValue = Math.max(
-    ...Object.values(scores).map(v => Math.abs(v)),
-    1 // 0으로 나누기 방지
-  );
-
   Object.keys(scores).forEach(key => {
     scores[key as keyof AxisScores] = Math.max(-1, Math.min(1,
       scores[key as keyof AxisScores] / Math.max(records.length * 0.3, 1)
@@ -347,7 +342,7 @@ export function generateSimpleProfile(
   axisScores: AxisScores,
   behaviorPattern: BehaviorPattern
 ): FounderProfile {
-  const { speedVsQuality, marketVsProduct, receptiveVsIndependent, techVsBusiness, riskSeekingVsAvoiding } = axisScores;
+  const { speedVsQuality, marketVsProduct, techVsBusiness, riskSeekingVsAvoiding } = axisScores;
 
   // 창업자 타입 결정
   const typeComponents: string[] = [];

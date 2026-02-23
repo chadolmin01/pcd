@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, memo } from 'react';
-import { ArrowRight, User, Building2, Mail, ShieldCheck, Shield, Rocket, Zap, Lightbulb, Target, TrendingUp, Loader2, AlertCircle } from 'lucide-react';
+import { ArrowRight, User, Building2, Mail, ShieldCheck, Shield, Lightbulb, Target, Loader2, AlertCircle } from 'lucide-react';
 
 interface OnboardingData {
   name: string;

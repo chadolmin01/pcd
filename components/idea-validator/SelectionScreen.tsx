@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, memo } from 'react';
-import { Sparkles, FileText, ArrowRight, Zap, Layers, Sword, Cpu, Paintbrush, DollarSign, Megaphone, Scale, ClipboardList, Server, Calculator, User, Settings, Check, RotateCcw, Lock, Loader2, X, CheckCircle2 } from 'lucide-react';
+import { Sparkles, FileText, ArrowRight, Zap, Layers, Sword, Cpu, Paintbrush, DollarSign, Megaphone, Scale, ClipboardList, Server, Calculator, User, Settings, Check, RotateCcw, Lock, Loader2, X } from 'lucide-react';
 import { ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PersonaPreset } from './types';
 import { useUsage } from '@/src/hooks/useUsage';
 
@@ -244,7 +244,7 @@ PersonaDetailModal.displayName = 'PersonaDetailModal';
 
 // Level Card Component
 const LevelCard = memo(({
-  level,
+  level: _level,
   title,
   desc,
   icon,
@@ -383,20 +383,6 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaRole[]>([]);
   const [modalPersona, setModalPersona] = useState<PersonaPreset | null>(null);
   const { usage, loading: usageLoading } = useUsage(userEmail || null);
-
-  const togglePersona = (personaId: PersonaRole) => {
-    if (selectedPersonas.includes(personaId)) {
-      if (selectedPersonas.length > 1) {
-        setSelectedPersonas(selectedPersonas.filter(p => p !== personaId));
-      }
-    } else {
-      if (selectedPersonas.length < 3) {
-        setSelectedPersonas([...selectedPersonas, personaId]);
-      } else {
-        setSelectedPersonas([...selectedPersonas.slice(0, 2), personaId]);
-      }
-    }
-  };
 
   const resetToDefault = () => {
     setSelectedPersonas(DEFAULT_PERSONAS);

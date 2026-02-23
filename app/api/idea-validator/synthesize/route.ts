@@ -249,12 +249,6 @@ JSON만 출력하세요. 설명이나 마크다운 코드블록 없이 순수 JS
       industry: ideaCategory || 'other'
     };
 
-    const defaultSectionData = {
-      problem: { market_status: '', problem_definition: '', development_necessity: '' },
-      solution: { development_plan: '', differentiation: '', competitiveness: '' },
-      scaleup: { business_model: '', market_size: '', roadmap: '' },
-      team: { founder: '', team_members: '', team_synergy: '' }
-    };
 
     const businessPlan: BusinessPlanData = {
       basicInfo: {

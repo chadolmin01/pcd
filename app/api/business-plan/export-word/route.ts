@@ -7,17 +7,14 @@ import {
   Table,
   TableRow,
   TableCell,
-  HeadingLevel,
   AlignmentType,
   BorderStyle,
   WidthType,
   ShadingType,
   PageBreak,
-  TableOfContents,
   Header,
   Footer,
   PageNumber,
-  NumberFormat,
 } from 'docx';
 import { BusinessPlanData } from '@/components/idea-validator/types';
 

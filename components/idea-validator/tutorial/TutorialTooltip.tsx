@@ -3,7 +3,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { useTutorial } from './TutorialContext';
-import { TutorialStep } from './tutorialSteps';
 
 interface TooltipPosition {
   top: number;

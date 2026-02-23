@@ -373,7 +373,7 @@ export function withRateLimit(
  */
 async function getIdentifierAndTier(
   request: NextRequest,
-  options: RateLimitOptions
+  _options: RateLimitOptions
 ): Promise<{ identifier: string; tier: RateLimitTier }> {
   // 인증된 사용자인지 확인
   try {

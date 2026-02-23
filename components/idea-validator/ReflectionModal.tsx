@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X, Sparkles, Check } from 'lucide-react';
-import { PerspectiveAdvice, PersonaRole, PERSONA_PRESETS } from './types';
+import { PerspectiveAdvice, PERSONA_PRESETS } from './types';
 import { Cpu, Paintbrush, DollarSign, Megaphone, Scale, ClipboardList, Server, Calculator, User, Settings } from 'lucide-react';
 
 export interface ReflectionModalState {

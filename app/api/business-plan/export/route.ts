@@ -82,7 +82,7 @@ async function generatePdfFromHtml(htmlContent: string): Promise<Buffer> {
 }
 
 function generateBusinessPlanHtml(data: BusinessPlanData): string {
-  const { basicInfo, sectionData, schedule, budget, teamTable, partners, scorecard, validationScore } = data;
+  const { basicInfo, sectionData, schedule, budget, scorecard, validationScore } = data;
 
   return `
 <!DOCTYPE html>
