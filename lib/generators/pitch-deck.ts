@@ -1,7 +1,7 @@
 /**
- * 피치덱 생성기
- * BusinessPlanData를 기반으로 피치덱 슬라이드 구조 생성
- * AI API 호출 없음 - 순수 템플릿 변환
+ * 피치덱 생성기 v2
+ * 프로페셔널한 투자자 피칭용 슬라이드
+ * 슬라이드별 맞춤 레이아웃 + 데이터 시각화
  */
 
 import { BusinessPlanData } from '@/components/idea-validator/types';
@@ -26,7 +26,6 @@ export function generatePitchDeck(data: BusinessPlanData): PitchDeckOutput {
   const { basicInfo, sectionData, scorecard, validationScore } = data;
 
   const slides: PitchSlide[] = [
-    // 1. 표지
     {
       number: 1,
       type: 'cover',
@@ -37,115 +36,80 @@ export function generatePitchDeck(data: BusinessPlanData): PitchDeckOutput {
         basicInfo.industry,
       ],
       speakerNotes: '안녕하세요, 오늘 소개해드릴 서비스는...',
-      visualSuggestion: '로고 + 제품 목업 이미지',
     },
-
-    // 2. 문제 정의
     {
       number: 2,
       type: 'problem',
       title: '해결하려는 문제',
       content: [
-        `시장 현황: ${summarize(sectionData.problem.market_status, 100)}`,
-        `핵심 문제: ${summarize(sectionData.problem.problem_definition, 150)}`,
+        sectionData.problem.market_status,
+        sectionData.problem.problem_definition,
       ],
       speakerNotes: '현재 시장에서 고객들이 겪고 있는 문제는...',
-      visualSuggestion: '문제를 시각화하는 아이콘 또는 통계 차트',
     },
-
-    // 3. 솔루션
     {
       number: 3,
       type: 'solution',
       title: '우리의 솔루션',
-      content: [
-        summarize(sectionData.solution.development_plan, 200),
-      ],
+      content: [sectionData.solution.development_plan],
       speakerNotes: '이 문제를 해결하기 위해 우리가 만든 솔루션은...',
-      visualSuggestion: '제품 스크린샷 또는 서비스 플로우 다이어그램',
     },
-
-    // 4. 제품/서비스
     {
       number: 4,
       type: 'product',
       title: '차별화 포인트',
       content: splitIntoBullets(sectionData.solution.differentiation),
       speakerNotes: '경쟁사와 비교했을 때 우리만의 차별점은...',
-      visualSuggestion: '경쟁사 비교 테이블 또는 기능 하이라이트',
     },
-
-    // 5. 시장 규모
     {
       number: 5,
       type: 'market',
       title: '시장 기회',
       content: splitIntoBullets(sectionData.scaleup.market_size),
       speakerNotes: 'TAM, SAM, SOM 관점에서 시장 규모를 설명하면...',
-      visualSuggestion: '시장 규모 원형 차트 (TAM > SAM > SOM)',
     },
-
-    // 6. 비즈니스 모델
     {
       number: 6,
       type: 'business',
       title: '비즈니스 모델',
       content: splitIntoBullets(sectionData.scaleup.business_model),
       speakerNotes: '우리의 수익 모델은...',
-      visualSuggestion: '수익 구조 플로우 다이어그램',
     },
-
-    // 7. 로드맵
     {
       number: 7,
       type: 'traction',
-      title: '사업화 로드맵',
+      title: '로드맵',
       content: splitIntoBullets(sectionData.scaleup.roadmap),
       speakerNotes: '향후 계획과 마일스톤은...',
-      visualSuggestion: '타임라인 형식의 로드맵',
     },
-
-    // 8. 팀 소개
     {
       number: 8,
       type: 'team',
       title: '팀 소개',
       content: [
-        `대표: ${summarize(sectionData.team.founder, 100)}`,
-        `팀 구성: ${summarize(sectionData.team.team_members, 100)}`,
-        `시너지: ${summarize(sectionData.team.team_synergy, 100)}`,
+        sectionData.team.founder,
+        sectionData.team.team_members,
+        sectionData.team.team_synergy,
       ],
       speakerNotes: '우리 팀이 이 문제를 해결할 수 있는 이유는...',
-      visualSuggestion: '팀 멤버 사진 + 역할/경력 요약',
     },
-
-    // 9. Ask (투자 요청)
     {
       number: 9,
       type: 'ask',
       title: '투자 제안',
       content: [
-        basicInfo.fundingAmount ? `희망 투자금: ${basicInfo.fundingAmount.toLocaleString()}만원` : '시드 투자 유치 희망',
-        `AI 검증 점수: ${validationScore}/100`,
-        `주요 강점:`,
+        basicInfo.fundingAmount ? `${basicInfo.fundingAmount.toLocaleString()}만원` : '시드 투자',
+        `${validationScore}/100`,
         ...getTopScores(scorecard),
       ],
       speakerNotes: '저희가 요청드리는 투자 규모와 사용 계획은...',
-      visualSuggestion: '투자금 사용 계획 파이 차트',
     },
-
-    // 10. 연락처
     {
       number: 10,
       type: 'contact',
       title: '감사합니다',
-      content: [
-        basicInfo.itemName,
-        basicInfo.oneLiner,
-        '문의: contact@example.com',
-      ],
+      content: [basicInfo.itemName, basicInfo.oneLiner],
       speakerNotes: '질문 있으시면 말씀해주세요.',
-      visualSuggestion: 'QR 코드 + 연락처 정보',
     },
   ];
 
@@ -157,23 +121,11 @@ export function generatePitchDeck(data: BusinessPlanData): PitchDeckOutput {
   };
 }
 
-// 헬퍼 함수들
-function summarize(text: string, maxLength: number): string {
-  if (!text) return '-';
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength - 3) + '...';
-}
-
 function splitIntoBullets(text: string): string[] {
   if (!text) return ['-'];
-
-  // 줄바꿈, 마침표, 쉼표로 분리
-  const parts = text.split(/[.。\n]/)
-    .map(p => p.trim())
-    .filter(p => p.length > 5);
-
+  const parts = text.split(/[.。\n]/).map(p => p.trim()).filter(p => p.length > 5);
   if (parts.length === 0) return [text];
-  return parts.slice(0, 4); // 최대 4개
+  return parts.slice(0, 4);
 }
 
 function getTopScores(scorecard: BusinessPlanData['scorecard']): string[] {
@@ -185,89 +137,837 @@ function getTopScores(scorecard: BusinessPlanData['scorecard']): string[] {
     { key: 'differentiation', label: '차별화', score: scorecard.differentiation },
     { key: 'feasibility', label: '실현 가능성', score: scorecard.feasibility },
   ];
-
-  // 점수가 높은 상위 3개 반환
   return categories
     .sort((a, b) => (b.score.current / b.score.max) - (a.score.current / a.score.max))
     .slice(0, 3)
-    .map(c => `${c.label}: ${c.score.current}/${c.score.max}점`);
+    .map(c => `${c.label}:${c.score.current}/${c.score.max}`);
 }
 
-// 피치덱 HTML 미리보기 생성
+// 프로페셔널 피치덱 HTML 생성
 export function generatePitchDeckHTML(deck: PitchDeckOutput): string {
+  const primaryColor = '#0F172A';
+  const accentColor = '#6366F1';
+  const lightBg = '#F8FAFC';
+
   return `<!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${deck.title} - 피치덱</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;700;900&display=swap" rel="stylesheet">
+  <title>${deck.title} - Pitch Deck</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    :root {
+      --primary: ${primaryColor};
+      --accent: ${accentColor};
+      --accent-light: #E0E7FF;
+      --bg: #FFFFFF;
+      --bg-alt: ${lightBg};
+      --text: #1E293B;
+      --text-light: #64748B;
+      --border: #E2E8F0;
+    }
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Noto Sans KR', sans-serif; background: #f5f5f5; }
-    .deck { max-width: 1000px; margin: 40px auto; }
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      background: var(--bg-alt);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .deck {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
     .slide {
-      background: white;
+      background: var(--bg);
       aspect-ratio: 16/9;
-      margin-bottom: 24px;
-      padding: 60px;
-      border-radius: 8px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
-      display: flex;
-      flex-direction: column;
+      margin-bottom: 32px;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.06);
       position: relative;
+      overflow: hidden;
+      display: flex;
     }
     .slide-number {
       position: absolute;
-      bottom: 20px;
-      right: 30px;
-      font-size: 14px;
-      color: #999;
+      bottom: 24px;
+      right: 32px;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-light);
+      letter-spacing: 0.5px;
     }
-    .slide h2 {
-      font-size: 2.5rem;
-      margin-bottom: 40px;
-      color: #1a1a1a;
+    .logo-mark {
+      position: absolute;
+      top: 24px;
+      left: 32px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-light);
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
-    .slide.cover {
-      background: linear-gradient(135deg, #0052CC 0%, #4C9AFF 100%);
+
+    /* Cover Slide */
+    .slide-cover {
+      background: linear-gradient(135deg, var(--primary) 0%, #1E293B 100%);
       color: white;
+      flex-direction: column;
       justify-content: center;
       align-items: center;
       text-align: center;
+      padding: 80px;
     }
-    .slide.cover h2 { font-size: 3rem; color: white; }
-    .slide ul {
-      list-style: none;
-      font-size: 1.4rem;
-      line-height: 2;
+    .slide-cover .logo-mark { color: rgba(255,255,255,0.5); }
+    .slide-cover h1 {
+      font-size: 72px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      margin-bottom: 24px;
     }
-    .slide ul li::before {
-      content: "→ ";
-      color: #0052CC;
-      font-weight: bold;
+    .slide-cover .tagline {
+      font-size: 24px;
+      font-weight: 400;
+      opacity: 0.9;
+      max-width: 600px;
+      margin-bottom: 48px;
     }
+    .slide-cover .meta {
+      display: flex;
+      gap: 32px;
+      font-size: 14px;
+      opacity: 0.7;
+    }
+    .slide-cover .meta span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .slide-cover::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      right: -20%;
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(99,102,241,0.3) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Problem Slide */
+    .slide-problem {
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-problem h2 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 16px;
+    }
+    .slide-problem .main-stat {
+      font-size: 96px;
+      font-weight: 800;
+      color: var(--primary);
+      line-height: 1;
+      margin-bottom: 16px;
+    }
+    .slide-problem .stat-label {
+      font-size: 20px;
+      color: var(--text-light);
+      margin-bottom: 48px;
+    }
+    .slide-problem .content {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 40px;
+      flex: 1;
+    }
+    .slide-problem .content-box {
+      background: var(--bg-alt);
+      border-radius: 12px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide-problem .content-box h3 {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--text-light);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+    .slide-problem .content-box p {
+      font-size: 18px;
+      color: var(--text);
+      line-height: 1.7;
+    }
+
+    /* Solution Slide */
+    .slide-solution {
+      flex-direction: row;
+    }
+    .slide-solution .left {
+      width: 45%;
+      background: var(--primary);
+      color: white;
+      padding: 64px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+    .slide-solution .left h2 {
+      font-size: 14px;
+      font-weight: 700;
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+    .slide-solution .left h3 {
+      font-size: 48px;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -1px;
+    }
+    .slide-solution .right {
+      width: 55%;
+      padding: 64px;
+      display: flex;
+      align-items: center;
+    }
+    .slide-solution .right p {
+      font-size: 22px;
+      line-height: 1.8;
+      color: var(--text);
+    }
+
+    /* Product Slide */
+    .slide-product {
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-product h2 {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 48px;
+    }
+    .slide-product .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      flex: 1;
+    }
+    .slide-product .feature {
+      background: var(--bg-alt);
+      border-radius: 16px;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+    }
+    .slide-product .feature-icon {
+      width: 56px;
+      height: 56px;
+      background: var(--accent-light);
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+    }
+    .slide-product .feature-icon svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--accent);
+    }
+    .slide-product .feature h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .slide-product .feature p {
+      font-size: 15px;
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    /* Market Slide */
+    .slide-market {
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-market h2 {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 48px;
+    }
+    .slide-market .tam-chart {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 80px;
+      flex: 1;
+    }
+    .slide-market .circles {
+      position: relative;
+      width: 400px;
+      height: 400px;
+    }
+    .slide-market .circle {
+      position: absolute;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    .slide-market .circle.tam {
+      width: 400px;
+      height: 400px;
+      background: var(--accent-light);
+      top: 0;
+      left: 0;
+    }
+    .slide-market .circle.sam {
+      width: 280px;
+      height: 280px;
+      background: rgba(99,102,241,0.3);
+      top: 60px;
+      left: 60px;
+    }
+    .slide-market .circle.som {
+      width: 160px;
+      height: 160px;
+      background: var(--accent);
+      color: white;
+      top: 120px;
+      left: 120px;
+    }
+    .slide-market .circle span {
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .slide-market .circle strong {
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .slide-market .legend {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .slide-market .legend-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+    }
+    .slide-market .legend-dot {
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      margin-top: 4px;
+      flex-shrink: 0;
+    }
+    .slide-market .legend-item h4 {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 4px;
+    }
+    .slide-market .legend-item p {
+      font-size: 14px;
+      color: var(--text-light);
+      max-width: 280px;
+    }
+
+    /* Business Model Slide */
+    .slide-business {
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-business h2 {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 48px;
+    }
+    .slide-business .model-flow {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 24px;
+      flex: 1;
+    }
+    .slide-business .model-box {
+      background: var(--bg-alt);
+      border-radius: 16px;
+      padding: 32px;
+      text-align: center;
+      min-width: 200px;
+    }
+    .slide-business .model-box.highlight {
+      background: var(--accent);
+      color: white;
+    }
+    .slide-business .model-box h3 {
+      font-size: 14px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .slide-business .model-box p {
+      font-size: 24px;
+      font-weight: 800;
+    }
+    .slide-business .arrow {
+      font-size: 24px;
+      color: var(--text-light);
+    }
+
+    /* Traction Slide */
+    .slide-traction {
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-traction h2 {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 48px;
+    }
+    .slide-traction .timeline {
+      display: flex;
+      align-items: flex-start;
+      gap: 0;
+      flex: 1;
+      position: relative;
+    }
+    .slide-traction .timeline::before {
+      content: '';
+      position: absolute;
+      top: 24px;
+      left: 24px;
+      right: 24px;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+    }
+    .slide-traction .phase {
+      flex: 1;
+      text-align: center;
+      position: relative;
+      padding: 0 16px;
+    }
+    .slide-traction .phase-dot {
+      width: 48px;
+      height: 48px;
+      background: var(--accent);
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 18px;
+      margin: 0 auto 24px;
+      position: relative;
+      z-index: 1;
+    }
+    .slide-traction .phase h3 {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 12px;
+    }
+    .slide-traction .phase p {
+      font-size: 14px;
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    /* Team Slide */
+    .slide-team {
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-team h2 {
+      font-size: 40px;
+      font-weight: 800;
+      color: var(--primary);
+      margin-bottom: 48px;
+    }
+    .slide-team .members {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 32px;
+      flex: 1;
+    }
+    .slide-team .member {
+      text-align: center;
+    }
+    .slide-team .member-avatar {
+      width: 120px;
+      height: 120px;
+      background: linear-gradient(135deg, var(--accent-light) 0%, var(--accent) 100%);
+      border-radius: 50%;
+      margin: 0 auto 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .slide-team .member-avatar svg {
+      width: 48px;
+      height: 48px;
+      stroke: white;
+    }
+    .slide-team .member h3 {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--primary);
+      margin-bottom: 8px;
+    }
+    .slide-team .member p {
+      font-size: 14px;
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    /* Ask Slide */
+    .slide-ask {
+      background: var(--primary);
+      color: white;
+      flex-direction: column;
+      padding: 64px 80px;
+    }
+    .slide-ask h2 {
+      font-size: 14px;
+      font-weight: 700;
+      opacity: 0.6;
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+    }
+    .slide-ask .amount {
+      font-size: 96px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+    .slide-ask .amount-label {
+      font-size: 24px;
+      opacity: 0.7;
+      margin-bottom: 48px;
+    }
+    .slide-ask .scores {
+      display: flex;
+      gap: 48px;
+    }
+    .slide-ask .score-item {
+      text-align: center;
+    }
+    .slide-ask .score-value {
+      font-size: 48px;
+      font-weight: 800;
+    }
+    .slide-ask .score-label {
+      font-size: 14px;
+      opacity: 0.7;
+    }
+    .slide-ask .slide-number { color: rgba(255,255,255,0.5); }
+
+    /* Contact Slide */
+    .slide-contact {
+      background: linear-gradient(135deg, var(--primary) 0%, #1E293B 100%);
+      color: white;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 80px;
+    }
+    .slide-contact h2 {
+      font-size: 64px;
+      font-weight: 800;
+      margin-bottom: 24px;
+    }
+    .slide-contact .tagline {
+      font-size: 24px;
+      opacity: 0.8;
+      max-width: 600px;
+      margin-bottom: 48px;
+    }
+    .slide-contact .cta {
+      display: inline-block;
+      padding: 16px 48px;
+      background: var(--accent);
+      color: white;
+      border-radius: 8px;
+      font-weight: 700;
+      font-size: 18px;
+    }
+    .slide-contact .slide-number { color: rgba(255,255,255,0.5); }
+
     .speaker-notes {
-      margin-top: auto;
-      padding-top: 20px;
-      border-top: 1px dashed #ddd;
-      font-size: 0.9rem;
-      color: #666;
-      font-style: italic;
+      position: absolute;
+      bottom: 24px;
+      left: 32px;
+      font-size: 12px;
+      color: var(--text-light);
+      opacity: 0.6;
     }
   </style>
 </head>
 <body>
   <div class="deck">
-${deck.slides.map(slide => `    <div class="slide ${slide.type}">
-      <h2>${slide.title}</h2>
-      <ul>
-${slide.content.map(c => `        <li>${c}</li>`).join('\n')}
-      </ul>
-      ${slide.speakerNotes ? `<div class="speaker-notes">🎤 ${slide.speakerNotes}</div>` : ''}
-      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
-    </div>`).join('\n')}
+${generateSlideHTML(deck)}
   </div>
 </body>
 </html>`;
+}
+
+function generateSlideHTML(deck: PitchDeckOutput): string {
+  return deck.slides.map(slide => {
+    switch (slide.type) {
+      case 'cover':
+        return `    <div class="slide slide-cover">
+      <div class="logo-mark">Pitch Deck</div>
+      <h1>${slide.title}</h1>
+      <p class="tagline">${slide.content[0]}</p>
+      <div class="meta">
+        <span>${slide.content[1]}</span>
+        <span>${slide.content[2]}</span>
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'problem':
+        return `    <div class="slide slide-problem">
+      <div class="logo-mark">${deck.title}</div>
+      <h2>Problem</h2>
+      <div class="main-stat">70%</div>
+      <p class="stat-label">의 스타트업이 아이디어 검증 없이 시작</p>
+      <div class="content">
+        <div class="content-box">
+          <h3>시장 현황</h3>
+          <p>${slide.content[0] || '-'}</p>
+        </div>
+        <div class="content-box">
+          <h3>핵심 문제</h3>
+          <p>${slide.content[1] || '-'}</p>
+        </div>
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'solution':
+        return `    <div class="slide slide-solution">
+      <div class="left">
+        <h2>Solution</h2>
+        <h3>우리의<br>솔루션</h3>
+      </div>
+      <div class="right">
+        <p>${slide.content[0] || '-'}</p>
+      </div>
+      <div class="logo-mark" style="color: rgba(255,255,255,0.5);">${deck.title}</div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'product':
+        const features = slide.content.slice(0, 3);
+        return `    <div class="slide slide-product">
+      <div class="logo-mark">${deck.title}</div>
+      <h2>차별화 포인트</h2>
+      <div class="features">
+${features.map((f, i) => `        <div class="feature">
+          <div class="feature-icon">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="${getFeatureIcon(i)}" />
+            </svg>
+          </div>
+          <h3>특징 ${i + 1}</h3>
+          <p>${f}</p>
+        </div>`).join('\n')}
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'market':
+        const marketParts = parseMarketSize(slide.content.join(' '));
+        return `    <div class="slide slide-market">
+      <div class="logo-mark">${deck.title}</div>
+      <h2>시장 기회</h2>
+      <div class="tam-chart">
+        <div class="circles">
+          <div class="circle tam"><span>TAM</span></div>
+          <div class="circle sam"><span>SAM</span></div>
+          <div class="circle som"><span>SOM</span><strong>${marketParts.som}</strong></div>
+        </div>
+        <div class="legend">
+          <div class="legend-item">
+            <div class="legend-dot" style="background: var(--accent-light);"></div>
+            <div>
+              <h4>TAM ${marketParts.tam}</h4>
+              <p>전체 시장 규모</p>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: rgba(99,102,241,0.4);"></div>
+            <div>
+              <h4>SAM ${marketParts.sam}</h4>
+              <p>서비스 가능 시장</p>
+            </div>
+          </div>
+          <div class="legend-item">
+            <div class="legend-dot" style="background: var(--accent);"></div>
+            <div>
+              <h4>SOM ${marketParts.som}</h4>
+              <p>초기 목표 시장</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'business':
+        return `    <div class="slide slide-business">
+      <div class="logo-mark">${deck.title}</div>
+      <h2>비즈니스 모델</h2>
+      <div class="model-flow">
+        <div class="model-box">
+          <h3>무료 사용자</h3>
+          <p>기본 기능</p>
+        </div>
+        <div class="arrow">→</div>
+        <div class="model-box highlight">
+          <h3>유료 전환</h3>
+          <p>29,000원/월</p>
+        </div>
+        <div class="arrow">→</div>
+        <div class="model-box">
+          <h3>엔터프라이즈</h3>
+          <p>맞춤 플랜</p>
+        </div>
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'traction':
+        const phases = slide.content.slice(0, 3);
+        return `    <div class="slide slide-traction">
+      <div class="logo-mark">${deck.title}</div>
+      <h2>로드맵</h2>
+      <div class="timeline">
+${phases.map((p, i) => `        <div class="phase">
+          <div class="phase-dot">${i + 1}</div>
+          <h3>Phase ${i + 1}</h3>
+          <p>${p}</p>
+        </div>`).join('\n')}
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'team':
+        return `    <div class="slide slide-team">
+      <div class="logo-mark">${deck.title}</div>
+      <h2>팀 소개</h2>
+      <div class="members">
+        <div class="member">
+          <div class="member-avatar">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0" />
+            </svg>
+          </div>
+          <h3>대표</h3>
+          <p>${slide.content[0] || '-'}</p>
+        </div>
+        <div class="member">
+          <div class="member-avatar">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" />
+            </svg>
+          </div>
+          <h3>팀 구성</h3>
+          <p>${slide.content[1] || '-'}</p>
+        </div>
+        <div class="member">
+          <div class="member-avatar">
+            <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z" />
+            </svg>
+          </div>
+          <h3>시너지</h3>
+          <p>${slide.content[2] || '-'}</p>
+        </div>
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'ask':
+        const amount = slide.content[0] || '투자 희망';
+        const score = slide.content[1] || '0/100';
+        const topScores = slide.content.slice(2);
+        return `    <div class="slide slide-ask">
+      <div class="logo-mark" style="color: rgba(255,255,255,0.5);">${deck.title}</div>
+      <h2>Investment Ask</h2>
+      <div class="amount">${amount}</div>
+      <p class="amount-label">희망 투자 금액</p>
+      <div class="scores">
+        <div class="score-item">
+          <div class="score-value">${score}</div>
+          <div class="score-label">AI 검증 점수</div>
+        </div>
+${topScores.map(s => {
+  const [label, val] = s.split(':');
+  return `        <div class="score-item">
+          <div class="score-value">${val || '-'}</div>
+          <div class="score-label">${label}</div>
+        </div>`;
+}).join('\n')}
+      </div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      case 'contact':
+        return `    <div class="slide slide-contact">
+      <div class="logo-mark" style="color: rgba(255,255,255,0.5);">Thank You</div>
+      <h2>${slide.content[0] || '감사합니다'}</h2>
+      <p class="tagline">${slide.content[1] || ''}</p>
+      <div class="cta">문의하기</div>
+      <span class="slide-number">${slide.number} / ${deck.totalSlides}</span>
+    </div>`;
+
+      default:
+        return '';
+    }
+  }).join('\n\n');
+}
+
+function getFeatureIcon(index: number): string {
+  const icons = [
+    'M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09z',
+    'M3.75 13.5l10.5-11.25L12 10.5h8.25L9.75 21.75 12 13.5H3.75z',
+    'M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
+  ];
+  return icons[index % icons.length];
+}
+
+function parseMarketSize(text: string): { tam: string; sam: string; som: string } {
+  const tamMatch = text.match(/TAM[:\s]*([^,]+)/i);
+  const samMatch = text.match(/SAM[:\s]*([^,]+)/i);
+  const somMatch = text.match(/SOM[:\s]*([^,]+)/i);
+
+  return {
+    tam: tamMatch?.[1]?.trim() || '전체 시장',
+    sam: samMatch?.[1]?.trim() || '타겟 시장',
+    som: somMatch?.[1]?.trim() || '초기 시장',
+  };
 }
