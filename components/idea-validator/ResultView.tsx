@@ -224,10 +224,10 @@ const ResultView: React.FC<ResultViewProps> = ({
           label={synthesizing ? '생성중...' : '사업계획서'}
         />
         <div className="flex items-center gap-2 ml-auto">
-          <button className="p-2 rounded border border-gray-200 bg-white text-gray-600">
+          <button className="p-2 rounded border border-gray-200 bg-white text-gray-600" aria-label="다운로드">
             <Download size={16} />
           </button>
-          <button className="p-2 rounded bg-black text-white">
+          <button className="p-2 rounded bg-black text-white" aria-label="공유하기">
             <Share2 size={16} />
           </button>
         </div>

@@ -42,6 +42,7 @@ export const JdView = memo(({ jd, onCopy, copied }: JdViewProps) => (
           <button
             onClick={() => onCopy(JSON.stringify(jd))}
             className="p-3 border border-gray-200 rounded-full hover:bg-gray-50 text-gray-600 transition-colors"
+            aria-label={copied ? "복사됨" : "공유하기"}
           >
             {copied ? <Check size={20} className="text-green-500" /> : <Share2 size={20} />}
           </button>

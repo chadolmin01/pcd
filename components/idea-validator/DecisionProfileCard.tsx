@@ -79,7 +79,7 @@ const DecisionProfileCard: React.FC<DecisionProfileCardProps> = ({ className = '
             <span className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest">
               Founder Profile
             </span>
-            <button onClick={handleRefresh} className="p-1 text-gray-300 hover:text-gray-600 transition-colors">
+            <button onClick={handleRefresh} className="p-1 text-gray-300 hover:text-gray-600 transition-colors" aria-label="프로필 새로고침">
               <RefreshCw size={10} />
             </button>
           </div>
@@ -155,6 +155,7 @@ const DecisionProfileCard: React.FC<DecisionProfileCardProps> = ({ className = '
               <button
                 onClick={() => setShowFullCard(false)}
                 className="absolute -top-3 -right-3 z-10 w-7 h-7 bg-white rounded-full shadow-md flex items-center justify-center text-gray-400 hover:text-gray-900 transition-colors border border-gray-200"
+                aria-label="닫기"
               >
                 <span className="text-sm">×</span>
               </button>
@@ -172,7 +173,7 @@ const DecisionProfileCard: React.FC<DecisionProfileCardProps> = ({ className = '
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
         <h3 className="font-bold text-sm text-gray-900">창업자 성향 분석</h3>
-        <button onClick={handleRefresh} className="p-1.5 text-gray-300 hover:text-gray-600 transition-colors">
+        <button onClick={handleRefresh} className="p-1.5 text-gray-300 hover:text-gray-600 transition-colors" aria-label="프로필 새로고침">
           <RefreshCw size={12} />
         </button>
       </div>

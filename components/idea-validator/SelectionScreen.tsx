@@ -169,6 +169,7 @@ const PersonaDetailModal = memo(({
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded transition-colors"
+            aria-label="닫기"
           >
             <X size={18} className="text-gray-400" />
           </button>
