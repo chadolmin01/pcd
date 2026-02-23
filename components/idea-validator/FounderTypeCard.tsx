@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef, useState } from 'react';
+import Image from 'next/image';
 import { Download, Share2, X } from 'lucide-react';
 import { FounderTypeId, getFounderType, getBestMatch, METHODOLOGY_REFERENCES } from './founderTypes';
 import { AxisScores } from './decisionAnalyzer';
@@ -108,11 +109,14 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
         {/* Header with Full Image - Wider aspect ratio */}
         {type.mascotUrl ? (
           <div className="relative">
-            <div className="aspect-[2/1] w-full overflow-hidden">
-              <img
+            <div className="aspect-[2/1] w-full overflow-hidden relative">
+              <Image
                 src={type.mascotUrl}
                 alt={type.likePerson}
-                className="w-full h-full object-cover object-top"
+                fill
+                sizes="520px"
+                className="object-cover object-top"
+                priority
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
             </div>
