@@ -54,11 +54,11 @@ export const analyzeIdea = async (
     // Fallback response structure
     return {
       responses: [{
-        role: 'System' as any,
+        role: 'System',
         name: '시스템',
         avatar: '',
         content: '신경망 연결이 불안정합니다. 잠시 후 다시 시도해주세요.',
-        tone: 'Neutral' as any,
+        tone: 'Neutral',
         suggestedActions: []
       }],
       metrics: {

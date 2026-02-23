@@ -27,8 +27,9 @@ const DecisionProfileCard: React.FC<DecisionProfileCardProps> = ({ className = '
   const loadAnalysis = () => {
     const data = analyzeDecisions();
 
-    if (data.records.length > 0 && (!data.profile || data.records.length > (data.profile as any)?.recordsCount)) {
+    if (data.records.length > 0 && (!data.profile || data.records.length > (data.profile.recordsCount ?? 0))) {
       const newProfile = generateSimpleProfile(data.axisScores, data.behaviorPattern);
+      newProfile.recordsCount = data.records.length;
       saveFounderProfile(newProfile);
       data.profile = newProfile;
     }

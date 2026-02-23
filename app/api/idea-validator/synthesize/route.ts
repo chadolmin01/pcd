@@ -1,14 +1,38 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { withRateLimit } from '@/lib/rate-limit';
 import {
   BusinessPlanData,
   Scorecard,
   ChatMessage,
-  PersonaResponse,
   createEmptyScorecard
 } from '@/components/idea-validator/types';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+const apiKey = process.env.GEMINI_API_KEY;
+if (!apiKey) {
+  console.error('GEMINI_API_KEY is not configured');
+}
+const genAI = new GoogleGenerativeAI(apiKey || '');
+
+// 파싱된 결과 타입 정의
+interface ParsedBusinessPlan {
+  basicInfo?: {
+    itemName?: string;
+    oneLiner?: string;
+    targetCustomer?: string;
+    industry?: string;
+  };
+  sectionData?: {
+    problem?: { market_status?: string; problem_definition?: string; development_necessity?: string };
+    solution?: { development_plan?: string; differentiation?: string; competitiveness?: string };
+    scaleup?: { business_model?: string; market_size?: string; roadmap?: string };
+    team?: { founder?: string; team_members?: string; team_synergy?: string };
+  };
+  schedule?: Array<{ no: string; content: string; period: string; detail: string }>;
+  budget?: Array<{ category: string; detail: string; amount: string }>;
+  teamTable?: Array<{ no: string; position: string; role: string; capability: string; status: string }>;
+  partners?: Array<{ no: string; name: string; capability: string; plan: string; period: string }>;
+}
 
 interface SynthesizeRequest {
   originalIdea: string;
@@ -73,7 +97,7 @@ function scorecardToText(scorecard: Scorecard): string {
   }).join('\n');
 }
 
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(async (request: NextRequest) => {
   try {
     const body: SynthesizeRequest = await request.json();
     const {
@@ -83,6 +107,28 @@ export async function POST(request: NextRequest) {
       scorecard,
       ideaCategory
     } = body;
+
+    // 입력 검증
+    if (!originalIdea || typeof originalIdea !== 'string' || originalIdea.trim().length === 0) {
+      return NextResponse.json(
+        { success: false, error: '원본 아이디어가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (!conversationHistory || !Array.isArray(conversationHistory)) {
+      return NextResponse.json(
+        { success: false, error: '대화 히스토리가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (!apiKey) {
+      return NextResponse.json(
+        { success: false, error: 'AI 서비스가 설정되지 않았습니다.' },
+        { status: 503 }
+      );
+    }
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
 
@@ -187,28 +233,57 @@ JSON만 출력하세요. 설명이나 마크다운 코드블록 없이 순수 JS
     }
 
     // JSON 파싱
-    let parsed: any;
+    let parsed: ParsedBusinessPlan;
     try {
-      parsed = JSON.parse(jsonStr);
+      parsed = JSON.parse(jsonStr) as ParsedBusinessPlan;
     } catch (parseError) {
       console.error('JSON parse error:', parseError);
-      console.error('Raw text:', text.substring(0, 500));
       throw new Error('Failed to parse synthesis result');
     }
 
-    // BusinessPlanData 형식으로 변환
+    // BusinessPlanData 형식으로 변환 (undefined 필드를 기본값으로 대체)
+    const defaultBasicInfo = {
+      itemName: originalIdea.slice(0, 20),
+      oneLiner: originalIdea.slice(0, 50),
+      targetCustomer: '일반 사용자',
+      industry: ideaCategory || 'other'
+    };
+
+    const defaultSectionData = {
+      problem: { market_status: '', problem_definition: '', development_necessity: '' },
+      solution: { development_plan: '', differentiation: '', competitiveness: '' },
+      scaleup: { business_model: '', market_size: '', roadmap: '' },
+      team: { founder: '', team_members: '', team_synergy: '' }
+    };
+
     const businessPlan: BusinessPlanData = {
-      basicInfo: parsed.basicInfo || {
-        itemName: originalIdea.slice(0, 20),
-        oneLiner: originalIdea.slice(0, 50),
-        targetCustomer: '일반 사용자',
-        industry: ideaCategory || 'other'
+      basicInfo: {
+        itemName: parsed.basicInfo?.itemName || defaultBasicInfo.itemName,
+        oneLiner: parsed.basicInfo?.oneLiner || defaultBasicInfo.oneLiner,
+        targetCustomer: parsed.basicInfo?.targetCustomer || defaultBasicInfo.targetCustomer,
+        industry: parsed.basicInfo?.industry || defaultBasicInfo.industry
       },
-      sectionData: parsed.sectionData || {
-        problem: { market_status: '', problem_definition: '', development_necessity: '' },
-        solution: { development_plan: '', differentiation: '', competitiveness: '' },
-        scaleup: { business_model: '', market_size: '', roadmap: '' },
-        team: { founder: '', team_members: '', team_synergy: '' }
+      sectionData: {
+        problem: {
+          market_status: parsed.sectionData?.problem?.market_status || '',
+          problem_definition: parsed.sectionData?.problem?.problem_definition || '',
+          development_necessity: parsed.sectionData?.problem?.development_necessity || ''
+        },
+        solution: {
+          development_plan: parsed.sectionData?.solution?.development_plan || '',
+          differentiation: parsed.sectionData?.solution?.differentiation || '',
+          competitiveness: parsed.sectionData?.solution?.competitiveness || ''
+        },
+        scaleup: {
+          business_model: parsed.sectionData?.scaleup?.business_model || '',
+          market_size: parsed.sectionData?.scaleup?.market_size || '',
+          roadmap: parsed.sectionData?.scaleup?.roadmap || ''
+        },
+        team: {
+          founder: parsed.sectionData?.team?.founder || '',
+          team_members: parsed.sectionData?.team?.team_members || '',
+          team_synergy: parsed.sectionData?.team?.team_synergy || ''
+        }
       },
       schedule: parsed.schedule || [],
       budget: parsed.budget || [],
@@ -234,4 +309,4 @@ JSON만 출력하세요. 설명이나 마크다운 코드블록 없이 순수 JS
       { status: 500 }
     );
   }
-}
+}, { isAI: true });

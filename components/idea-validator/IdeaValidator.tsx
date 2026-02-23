@@ -6,7 +6,7 @@ import SelectionScreen from './SelectionScreen';
 import ChatInterface from './ChatInterface';
 import ResultView from './ResultView';
 import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData, ChatMessage, Scorecard, createEmptyScorecard } from './types';
-import { validationResultsStore } from '@/src/lib/validationResultsStore';
+import { validationResultsStore } from '@/lib/validationResultsStore';
 import { toast } from 'sonner';
 import { useUsage } from '@/src/hooks/useUsage';
 
@@ -89,9 +89,7 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
 
       // Record usage for this level
       const levelKey = selectedLevel.toLowerCase() as 'sketch' | 'mvp' | 'defense';
-      console.log('[Usage] Recording:', { email: userData?.email, levelKey, score, validationId: savedResult.id });
-      const usageResult = await recordUsage(levelKey, score, savedResult.id);
-      console.log('[Usage] Result:', usageResult);
+      await recordUsage(levelKey, score, savedResult.id);
 
       toast.success('검증 결과가 저장되었습니다');
     } catch (error) {

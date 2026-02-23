@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/src/lib/supabase';
-import { withRateLimit } from '@/src/lib/rate-limit';
+import { createServerClient } from '@/lib/supabase';
+import { withRateLimit } from '@/lib/rate-limit';
 
 // withRateLimit HOF 적용 (로그인/회원가입 전용 제한)
 export const POST = withRateLimit(async (request: NextRequest) => {

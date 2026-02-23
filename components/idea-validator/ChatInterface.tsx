@@ -98,7 +98,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       isUser: false,
       timestamp: Date.now(),
       responses: [{
-        role: 'System' as any,
+        role: 'System',
         name: 'Draft. OS',
         avatar: '',
         content: greeting,

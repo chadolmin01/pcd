@@ -60,9 +60,10 @@ const store: RateLimitStore = {
 
 // 정리 인터벌 (5분마다 만료된 항목 정리)
 let cleanupInterval: NodeJS.Timeout | null = null
+let isShuttingDown = false
 
 function startCleanup() {
-  if (cleanupInterval) return
+  if (cleanupInterval || isShuttingDown) return
 
   cleanupInterval = setInterval(() => {
     const now = Date.now()
@@ -75,11 +76,46 @@ function startCleanup() {
       }
     }
   }, 5 * 60 * 1000)
+
+  // unref()를 호출하여 이 타이머가 Node.js 프로세스 종료를 막지 않도록 함
+  if (cleanupInterval.unref) {
+    cleanupInterval.unref()
+  }
 }
 
-// 서버 시작 시 정리 시작
+/**
+ * Rate limiter 정리 함수 (테스트 및 graceful shutdown용)
+ */
+export function stopCleanup() {
+  if (cleanupInterval) {
+    clearInterval(cleanupInterval)
+    cleanupInterval = null
+  }
+  isShuttingDown = true
+}
+
+/**
+ * 모든 rate limit 데이터 초기화 (테스트용)
+ */
+export function resetRateLimitStore() {
+  store.minute.clear()
+  store.hour.clear()
+  store.day.clear()
+}
+
+// 서버 시작 시 정리 시작 + graceful shutdown 핸들러 등록
 if (typeof window === 'undefined') {
   startCleanup()
+
+  // Graceful shutdown 핸들러
+  const handleShutdown = () => {
+    stopCleanup()
+  }
+
+  // 프로세스 종료 시그널 처리
+  process.once('SIGTERM', handleShutdown)
+  process.once('SIGINT', handleShutdown)
+  process.once('beforeExit', handleShutdown)
 }
 
 // ================================================

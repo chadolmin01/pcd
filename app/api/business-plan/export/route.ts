@@ -1,15 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
 import puppeteer from 'puppeteer';
+import { withRateLimit } from '@/lib/rate-limit';
 import { BusinessPlanData } from '@/components/idea-validator/types';
 
-export async function POST(req: NextRequest) {
+export const POST = withRateLimit(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { data, format } = body as { data: BusinessPlanData; format: string };
 
-    if (!data || format !== 'pdf') {
+    // 입력 검증
+    if (!data) {
       return NextResponse.json(
-        { error: '필수 파라미터가 누락되었습니다.' },
+        { error: '사업계획서 데이터가 필요합니다.' },
+        { status: 400 }
+      );
+    }
+
+    if (format !== 'pdf') {
+      return NextResponse.json(
+        { error: '지원하지 않는 형식입니다. (지원: pdf)' },
+        { status: 400 }
+      );
+    }
+
+    if (!data.basicInfo || !data.sectionData) {
+      return NextResponse.json(
+        { error: '사업계획서 필수 정보가 누락되었습니다.' },
         { status: 400 }
       );
     }
@@ -34,7 +50,7 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+}, { isAI: true }); // Puppeteer는 리소스 집약적이므로 AI 티어로 제한
 
 async function generatePdfFromHtml(htmlContent: string): Promise<Buffer> {
   const browser = await puppeteer.launch({

@@ -65,6 +65,23 @@ npm run dev
 
 브라우저에서 `http://localhost:3000` 접속
 
+### 4. 포트 충돌 해결 (Windows)
+
+개발 서버 실행 시 `EADDRINUSE` 에러가 발생하면:
+
+```powershell
+# 포트 3000 사용 중인 프로세스 확인
+netstat -ano | findstr :3000
+
+# 해당 PID로 프로세스 종료 (예: PID가 12345인 경우)
+taskkill /PID 12345 /F
+
+# 또는 모든 Node 프로세스 종료 (주의: 다른 Node 앱도 종료됨)
+taskkill /IM node.exe /F
+```
+
+> ⚠️ **주의**: `taskkill /IM node.exe /F`는 모든 Node.js 프로세스를 종료합니다. 다른 Node 앱이 실행 중이라면 PID로 특정 프로세스만 종료하세요.
+
 ## 사용 방법
 
 1. **AI 검증 모드** 선택

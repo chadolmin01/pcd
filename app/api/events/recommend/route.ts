@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerClient } from '@/src/lib/supabase';
-import { withRateLimit } from '@/src/lib/rate-limit';
+import { createServerClient } from '@/lib/supabase';
+import { withRateLimit } from '@/lib/rate-limit';
 
 /**
  * GET /api/events/recommend

@@ -50,6 +50,7 @@ export interface FounderProfile {
   idealCofounder: string;
   matchingTags: string[];
   generatedAt: string;
+  recordsCount?: number;           // 프로파일 생성 시 사용된 레코드 수
 }
 
 export interface DecisionAnalysis {
