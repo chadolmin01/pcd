@@ -1,5 +1,3 @@
-'use client';
-
 import IdeaValidator from '@/components/idea-validator/IdeaValidator';
 
 export default function Home() {

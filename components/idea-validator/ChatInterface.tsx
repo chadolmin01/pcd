@@ -1,13 +1,16 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { Send, Cpu, Paintbrush, DollarSign, ArrowRight, Lightbulb, Check, MessageSquare, X, Edit3, Sparkles, MessageCircle, TrendingUp, AlertTriangle, ShieldCheck, Layers, Coins, Lock, Zap, Sword, MoreHorizontal, Megaphone, Scale, ClipboardList, Server, Calculator, User, Settings, HelpCircle } from 'lucide-react';
+import { ArrowRight, Check, AlertTriangle, Layers, Lock, Zap, Sword, HelpCircle } from 'lucide-react';
 import { ChatMessage, AnalysisMetrics, ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PerspectiveAdvice, Scorecard, CategoryUpdate, createEmptyScorecard, ScorecardCategory } from './types';
 import { analyzeIdea } from './geminiService';
 import { useTutorialSafe } from './tutorial';
 import { saveDecisionBatch, startNewSession, getCurrentRound, incrementRound, getCurrentSessionId } from './decisionAnalyzer';
 import DecisionProfileCard from './DecisionProfileCard';
 import ScorecardPanel from './ScorecardPanel';
+import ReflectionModal, { ReflectionModalState } from './ReflectionModal';
+import MessageList from './MessageList';
+import ChatInput from './ChatInput';
 
 
 interface ChatInterfaceProps {
@@ -30,16 +33,6 @@ interface ChatInterfaceProps {
   onBack?: () => void; // Go back to selection screen
 }
 
-interface ReflectionModalState {
-  msgId: string;
-  respIdx: number;
-  role: string;
-  originalContent: string;
-  suggestedActions: string[];
-  // 새로운 필드: 서브 관점
-  perspectives?: PerspectiveAdvice[];
-  selectedPerspectiveIdx?: number;
-}
 
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, personas = DEFAULT_PERSONAS, externalInput, onExternalInputChange, hideInput = false, onRegisterSend, onBack }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -400,39 +393,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     onComplete(fullConv, firstIdea, reflectedAdvice, finalScore, messages, scorecard, ideaCategory);
   };
 
-  const getPersonaIcon = (role: string) => {
-    const preset = PERSONA_PRESETS.find(p => p.id === role || p.name === role);
-    if (preset) {
-      const icons: Record<string, React.ReactNode> = {
-        'Cpu': <Cpu size={16} />,
-        'Paintbrush': <Paintbrush size={16} />,
-        'DollarSign': <DollarSign size={16} />,
-        'Megaphone': <Megaphone size={16} />,
-        'Scale': <Scale size={16} />,
-        'ClipboardList': <ClipboardList size={16} />,
-        'Server': <Server size={16} />,
-        'Calculator': <Calculator size={16} />,
-        'User': <User size={16} />,
-        'Settings': <Settings size={16} />,
-      };
-      return icons[preset.icon] || <Cpu size={16} />;
-    }
-    return <Cpu size={16} />;
-  };
-
-  const getPersonaColor = (role: string) => {
-    const preset = PERSONA_PRESETS.find(p => p.id === role || p.name === role);
-    if (preset) {
-      return preset.color;
-    }
-    return 'bg-gray-50 border-gray-200 text-gray-600';
-  };
-
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
-  const pendingReflections = lastMsg && !lastMsg.isUser && lastMsg.responses
-    ? lastMsg.responses.filter(r => r.isReflected)
-    : [];
-  const hasPendingReflections = pendingReflections.length > 0;
   const isLimitReached = turnCount >= FREE_TURNS;
 
   // 첫 번째 사용자 아이디어 추출
@@ -530,150 +491,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         </div>
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide">
-          <div className={`w-full max-w-4xl mx-auto space-y-6 pt-4 ${hideInput ? 'pb-20' : 'pb-6'}`}>
-            {messages.map((msg) => (
-              <div key={msg.id} className={`flex gap-3 ${msg.isUser ? 'justify-end' : 'justify-start'}`}>
-
-                {msg.isUser ? (
-                  // User Message - Draft style
-                  <>
-                    <div className="max-w-[70%] space-y-1">
-                      <div className="flex items-center gap-2 mb-1 justify-end">
-                        <span className="text-xs font-bold text-gray-900">Me</span>
-                        <span className="text-[10px] font-mono text-gray-400">
-                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </span>
-                      </div>
-                      <div className={`p-4 rounded text-sm leading-relaxed shadow-sm break-keep
-                        ${msg.text?.startsWith('[종합 결정 사항]')
-                            ? 'bg-black text-white border border-black'
-                            : 'bg-white border border-gray-200 text-gray-900'
-                        }`}>
-                        {msg.text}
-                      </div>
-                    </div>
-                    <div className="w-8 h-8 rounded bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0 mt-6">
-                      <span className="text-gray-500 text-xs font-bold">U</span>
-                    </div>
-                  </>
-                ) : (
-                  // AI Persona Grid
-                  <>
-                    {msg.responses && msg.responses[0].role === 'System' ? (
-                      <>
-                        <div className="w-8 h-8 bg-black rounded flex items-center justify-center shrink-0 mt-6">
-                          <span className="text-white font-bold text-xs">D</span>
-                        </div>
-                        <div className="max-w-[70%] space-y-1">
-                          <div className="flex items-center gap-2 mb-1">
-                            <span className="text-xs font-bold text-gray-900">Draft AI</span>
-                            <span className="text-[10px] font-mono text-gray-400">
-                              {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                          <div className="p-4 bg-white border border-gray-200 rounded text-sm text-gray-700 leading-relaxed break-keep shadow-sm">
-                            {msg.responses[0].content}
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="w-full">
-                        <div className="flex items-center gap-2 mb-3">
-                          <div className="w-8 h-8 bg-black rounded flex items-center justify-center">
-                            <span className="text-white font-bold text-xs">D</span>
-                          </div>
-                          <span className="text-xs font-bold text-gray-900">Draft AI</span>
-                          <span className="text-[10px] font-mono text-gray-400">
-                            {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 ml-10" data-tutorial="persona-cards">
-                          {msg.responses?.map((resp, idx) => (
-                            <button
-                              key={idx}
-                              onClick={() => resp.role !== 'System' && openReflectionModal(
-                                msg.id, idx, resp.role, resp.content,
-                                resp.suggestedActions, resp.reflectedText, resp.perspectives
-                              )}
-                              className={`relative flex flex-col items-start p-5 border transition-all duration-200 text-left group w-full min-h-[180px]
-                                ${resp.isReflected
-                                  ? 'bg-gray-50 border-gray-300 shadow-sm rounded'
-                                  : 'bg-white border-gray-200 hover:border-black hover:shadow-sm rounded'
-                                }
-                              `}
-                              style={{ animationDelay: `${idx * 100}ms` }}
-                            >
-                              {/* Persona Icon */}
-                              <div className={`w-9 h-9 border rounded flex items-center justify-center mb-4 transition-colors
-                                ${resp.isReflected
-                                  ? 'bg-gray-800 border-gray-800 text-white'
-                                  : `${getPersonaColor(resp.role)} group-hover:bg-black group-hover:border-black group-hover:text-white`
-                                }
-                              `}>
-                                {getPersonaIcon(resp.role)}
-                              </div>
-
-                              {/* Role Label + Perspective Tags */}
-                              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                <span className="font-bold text-sm text-gray-900">{resp.role}</span>
-                                {resp.perspectives && resp.perspectives.length > 0 && (
-                                  <span className="text-[10px] text-gray-400 font-mono">
-                                    {resp.perspectives.slice(0, 3).map((p, pIdx) => (
-                                      <span key={pIdx}>#{p.perspectiveLabel.replace(/\s+/g, '')} </span>
-                                    ))}
-                                  </span>
-                                )}
-                              </div>
-
-                              {/* Content */}
-                              <p className="text-xs text-gray-500 leading-relaxed break-keep flex-1">
-                                {resp.isReflected && resp.reflectedText ? resp.reflectedText : resp.content}
-                              </p>
-
-                              {/* Selected Badge */}
-                              {resp.isReflected && (
-                                <div className="absolute top-4 right-4 w-5 h-5 bg-gray-800 rounded flex items-center justify-center">
-                                   <Check size={12} className="text-white" />
-                                </div>
-                              )}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Next Step Button - shown below cards when this is the last message with reflections */}
-                        {msg.id === lastMsg?.id && msg.responses?.some(r => r.isReflected) && (
-                          <div className="ml-10 mt-4 flex items-center justify-between p-3 bg-white border border-gray-200 rounded" data-tutorial="next-step-button">
-                            <div className="flex items-center gap-3">
-                              <div className="text-[10px] font-bold font-mono text-gray-500 uppercase tracking-wide">
-                                {msg.responses.filter(r => r.isReflected).length}개 조언 선택됨
-                              </div>
-                            </div>
-                            <button
-                              onClick={handleConsolidatedSend}
-                              disabled={isTyping}
-                              className="bg-black hover:bg-gray-800 text-white px-5 py-2 rounded font-bold text-xs transition-all flex items-center gap-2 disabled:opacity-50"
-                            >
-                              다음 단계
-                              <ArrowRight size={14} />
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            ))}
-
-            {isTyping && (
-              <div className="flex items-center gap-3 ml-10">
-                 <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce"></div>
-                 <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '75ms' }}></div>
-                 <div className="w-2 h-2 bg-gray-300 rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-              </div>
-            )}
-            <div className="h-4"></div>
-          </div>
+          <MessageList
+            messages={messages}
+            lastMsgId={lastMsg?.id}
+            isTyping={isTyping}
+            hideInput={hideInput}
+            onOpenReflectionModal={openReflectionModal}
+            onConsolidatedSend={handleConsolidatedSend}
+          />
         </div>
 
         {/* Token Limit Warning - always shown when limit reached */}
@@ -703,112 +528,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
         {/* Bottom Area - Input or Results Preview */}
         {!hideInput && !isLimitReached && (
-          <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
-            <div className="max-w-4xl mx-auto relative">
-              {/* No metrics yet - show normal input */}
-              {!metrics && (
-                <>
-                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
-                    <input
-                      type="text"
-                      className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
-                      placeholder="아이디어나 답변을 입력하세요..."
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                      disabled={isTyping}
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={isTyping || !input.trim()}
-                      className={`p-2 rounded transition-colors
-                        ${input.trim() && !isTyping
-                          ? 'bg-black text-white hover:bg-gray-800'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
-                      `}
-                    >
-                      <Send size={16} />
-                    </button>
-                  </div>
-                  <p className="text-center text-[10px] text-gray-400 mt-2 font-mono">
-                    Draft AI can make mistakes. Consider checking important information.
-                  </p>
-                </>
-              )}
-
-              {/* Has metrics but not in input mode - show thin status bar only */}
-              {metrics && !showInputMode && (
-                <div className="flex items-center justify-between p-4 bg-gray-50 border border-gray-200 rounded">
-                  <div className="flex items-center gap-4">
-                    <div className="text-sm">
-                      <span className="text-gray-500">현재 점수: </span>
-                      <span className="font-bold text-gray-900">{metrics.score}점</span>
-                    </div>
-                    <span className="text-gray-300">|</span>
-                    <span className="text-sm text-gray-500">{turnCount}/10 턴</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setShowInputMode(true)}
-                      className="px-4 py-2 border border-gray-300 text-gray-700 text-xs font-bold rounded hover:bg-gray-100 transition-colors"
-                    >
-                      계속 대화하기
-                    </button>
-                    <button
-                      onClick={handleFinish}
-                      className="px-4 py-2 bg-black text-white text-xs font-bold rounded hover:bg-gray-800 transition-colors flex items-center gap-2"
-                    >
-                      검증 완료
-                      <ArrowRight size={14} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* Has metrics and in input mode - show input with status */}
-              {metrics && showInputMode && (
-                <>
-                  <div className="flex items-center justify-between mb-3 px-1">
-                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                      <span>현재 점수: <span className="font-bold text-gray-900">{metrics.score}점</span></span>
-                      <span className="text-gray-300">|</span>
-                      <span>{turnCount}/10 턴</span>
-                    </div>
-                    <button
-                      onClick={handleFinish}
-                      className="px-3 py-1.5 bg-black text-white text-xs font-bold rounded hover:bg-gray-800 transition-colors flex items-center gap-1.5"
-                    >
-                      검증 완료
-                      <ArrowRight size={12} />
-                    </button>
-                  </div>
-                  <div className="relative flex items-center gap-3 bg-gray-50 border border-gray-200 rounded px-4 py-2 focus-within:bg-white focus-within:border-black transition-all">
-                    <input
-                      type="text"
-                      className="flex-1 bg-transparent text-sm focus:outline-none placeholder-gray-400"
-                      placeholder="추가 질문이나 답변을 입력하세요..."
-                      value={input}
-                      onChange={(e) => setInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-                      disabled={isTyping}
-                      autoFocus
-                    />
-                    <button
-                      onClick={handleSend}
-                      disabled={isTyping || !input.trim()}
-                      className={`p-2 rounded transition-colors
-                        ${input.trim() && !isTyping
-                          ? 'bg-black text-white hover:bg-gray-800'
-                          : 'bg-gray-200 text-gray-400 cursor-not-allowed'}
-                      `}
-                    >
-                      <Send size={16} />
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <ChatInput
+            input={input}
+            onInputChange={setInput}
+            onSend={handleSend}
+            onFinish={handleFinish}
+            isTyping={isTyping}
+            metrics={metrics}
+            showInputMode={showInputMode}
+            onShowInputMode={() => setShowInputMode(true)}
+            turnCount={turnCount}
+          />
         )}
 
         {/* Auto-complete when limit reached */}
@@ -864,157 +594,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
       {/* Reflection Modal */}
       {reflectionModal && (
-        <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/20 backdrop-blur-sm p-4">
-          <div className="bg-white w-full max-w-xl rounded shadow-xl border border-gray-200 flex flex-col max-h-[85vh] overflow-hidden">
-            <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between bg-white shrink-0">
-              <div className="flex items-center gap-3">
-                 <div className="p-2 bg-gray-100 rounded text-gray-700">
-                    {getPersonaIcon(reflectionModal.role)}
-                 </div>
-                 <div>
-                    <h3 className="font-bold text-gray-900 text-sm">{reflectionModal.role} 관점 선택</h3>
-                    <p className="text-[10px] text-gray-500 font-mono">3가지 관점 중 하나를 선택하세요</p>
-                 </div>
-              </div>
-              <button
-                onClick={closeReflectionModal}
-                className="text-gray-400 hover:text-gray-900 transition-colors p-1.5 rounded hover:bg-gray-100"
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            <div className="p-5 overflow-y-auto" data-tutorial="modal-content">
-               {/* 서브 관점 선택 UI */}
-               {reflectionModal.perspectives && reflectionModal.perspectives.length > 0 ? (
-                 <div className="mb-5" data-tutorial="quick-select">
-                   <label className="flex items-center gap-2 text-[9px] font-bold font-mono text-gray-400 uppercase mb-3 tracking-widest">
-                     <Sparkles size={10} />
-                     관점 선택
-                   </label>
-                   <div className="grid grid-cols-1 gap-3">
-                     {reflectionModal.perspectives.map((perspective, idx) => (
-                       <button
-                         key={idx}
-                         onClick={() => {
-                           setReflectionModal(prev => prev ? { ...prev, selectedPerspectiveIdx: idx } : null);
-                           setReflectionText(perspective.content);
-                         }}
-                         className={`text-left p-4 rounded border transition-all ${
-                           reflectionModal.selectedPerspectiveIdx === idx
-                             ? 'bg-gray-50 border-gray-300 shadow-sm'
-                             : 'bg-white border-gray-200 hover:border-gray-400'
-                         }`}
-                       >
-                         <div className="flex items-start gap-3">
-                           <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
-                             reflectionModal.selectedPerspectiveIdx === idx
-                               ? 'border-gray-800 bg-gray-800'
-                               : 'border-gray-300'
-                           }`}>
-                             {reflectionModal.selectedPerspectiveIdx === idx && <Check size={12} className="text-white" />}
-                           </div>
-                           <div className="flex-1">
-                             <div className="flex items-center gap-2 mb-1">
-                               <span className="font-bold text-sm text-gray-900">{perspective.perspectiveLabel}</span>
-                               <span className="text-[10px] text-gray-400 font-mono">
-                                 #{perspective.perspectiveId}
-                               </span>
-                             </div>
-                             <p className="text-xs text-gray-600 leading-relaxed break-keep mb-2">
-                               {perspective.content}
-                             </p>
-                             {perspective.suggestedActions && perspective.suggestedActions.length > 0 && (
-                               <div className="flex flex-wrap gap-1.5 mt-2">
-                                 {perspective.suggestedActions.map((action, aIdx) => (
-                                   <span key={aIdx} className="text-[10px] px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
-                                     {action}
-                                   </span>
-                                 ))}
-                               </div>
-                             )}
-                           </div>
-                         </div>
-                       </button>
-                     ))}
-                   </div>
-                 </div>
-               ) : (
-                 // 기존 UI (perspectives가 없는 경우 폴백)
-                 <>
-                   <div className="mb-5">
-                     <label className="text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 block tracking-widest">Original</label>
-                     <div className="p-4 bg-gray-50 rounded border border-gray-200 text-sm text-gray-700 leading-relaxed break-keep">
-                       {reflectionModal.originalContent}
-                     </div>
-                   </div>
-
-                   {reflectionModal.suggestedActions && reflectionModal.suggestedActions.length > 0 && (
-                     <div className="mb-5">
-                       <label className="flex items-center gap-2 text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 tracking-widest">
-                         <Sparkles size={10} />
-                         Quick Select
-                       </label>
-                       <div className="grid grid-cols-1 gap-2">
-                         {reflectionModal.suggestedActions.map((action, idx) => (
-                           <button
-                             key={idx}
-                             onClick={() => setReflectionText(action)}
-                             className={`text-left p-3 rounded border transition-all text-sm ${
-                               reflectionText === action
-                                 ? 'bg-gray-50 border-gray-300 shadow-sm text-gray-900'
-                                 : 'bg-white border-gray-200 hover:border-gray-400 text-gray-600'
-                             }`}
-                           >
-                             <div className="flex items-start gap-3">
-                               <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                                 reflectionText === action ? 'border-gray-800 bg-gray-800' : 'border-gray-300'
-                               }`}>
-                                 {reflectionText === action && <Check size={10} className="text-white" />}
-                               </div>
-                               <span className="break-keep text-xs">{action}</span>
-                             </div>
-                           </button>
-                         ))}
-                       </div>
-                     </div>
-                   )}
-                 </>
-               )}
-
-              <div data-tutorial="my-decision">
-                <label className="text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 block tracking-widest">
-                   나의 결정 (수정 가능)
-                </label>
-                <textarea
-                  value={reflectionText}
-                  onChange={(e) => setReflectionText(e.target.value)}
-                  className="w-full h-24 p-4 bg-white border border-gray-200 rounded text-gray-900 text-sm leading-relaxed focus:outline-none focus:border-black resize-none transition-all"
-                  placeholder="선택한 관점의 조언을 수정하거나 직접 작성하세요..."
-                />
-              </div>
-            </div>
-
-            <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 shrink-0">
-              {messages.find(m => m.id === reflectionModal.msgId)?.responses?.[reflectionModal.respIdx].isReflected && (
-                <button
-                  onClick={removeReflection}
-                  className="mr-auto text-red-500 text-[10px] font-bold font-mono uppercase hover:underline"
-                >
-                  선택 취소
-                </button>
-              )}
-
-              <button
-                onClick={saveReflectionLocally}
-                disabled={!reflectionText.trim()}
-                className="px-5 py-2 bg-black text-white font-bold rounded hover:bg-gray-800 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {messages.find(m => m.id === reflectionModal.msgId)?.responses?.[reflectionModal.respIdx].isReflected ? '수정' : '확인'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ReflectionModal
+          modalState={reflectionModal}
+          reflectionText={reflectionText}
+          onReflectionTextChange={setReflectionText}
+          onSelectPerspective={(idx, content) => {
+            setReflectionModal(prev => prev ? { ...prev, selectedPerspectiveIdx: idx } : null);
+            setReflectionText(content);
+          }}
+          onClose={closeReflectionModal}
+          onSave={saveReflectionLocally}
+          onRemove={removeReflection}
+          isAlreadyReflected={
+            messages.find(m => m.id === reflectionModal.msgId)?.responses?.[reflectionModal.respIdx].isReflected || false
+          }
+        />
       )}
     </div>
   );
