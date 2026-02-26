@@ -82,6 +82,7 @@ CategoryBar.displayName = 'CategoryBar';
 // 최근 업데이트 아이템
 const UpdateItem = memo(({ update }: { update: CategoryUpdate }) => {
   const info = SCORECARD_CATEGORIES[update.category];
+  if (!info) return null; // 유효하지 않은 카테고리 무시
   return (
     <div className="flex items-center gap-2 text-xs text-gray-600 py-1">
       <span className="text-green-600 font-bold">+{update.delta}</span>

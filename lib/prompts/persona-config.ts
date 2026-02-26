@@ -184,3 +184,18 @@ export const TARGET_SCORES: Record<string, number> = {
   mvp: 65,
   investor: 85,
 };
+
+// Level 타입 정의
+export type Level = 'sketch' | 'mvp' | 'investor';
+
+// perspectiveId를 간단한 문자열 배열로 변환하는 헬퍼
+export function getPerspectiveIdList(persona: string): string[] {
+  return ALLOWED_PERSPECTIVE_IDS[persona]?.map(p => p.id) || [];
+}
+
+// 프롬프트용 perspectiveId 문자열 생성
+export function getPerspectiveIdsForPrompt(personas: string[]): string {
+  return personas
+    .map(p => `${PERSONA_DESCRIPTIONS[p]?.nameKo || p}: ${getPerspectiveIdList(p).join(', ')}`)
+    .join('\n');
+}

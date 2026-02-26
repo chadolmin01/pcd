@@ -370,7 +370,7 @@ const SelectedPersonasSummary = memo(({ selectedPersonas }: { selectedPersonas: 
 SelectedPersonasSummary.displayName = 'SelectedPersonasSummary';
 
 interface SelectionScreenProps {
-  onSelect: (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[]) => void;
+  onSelect: (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[], interactionMode?: 'individual' | 'discussion') => void;
   skipToLevelSelect?: boolean;
   onBack?: () => void;
   userEmail?: string;
@@ -535,7 +535,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
                     desc="초기 아이디어 구체화 단계. 친절한 조력자와 함께 가능성을 탐색합니다."
                     icon={<Zap size={20} />}
                     colorTheme="yellow"
-                    onSelect={() => onSelect('ai', ValidationLevel.SKETCH, selectedPersonas)}
+                    onSelect={() => onSelect('ai', ValidationLevel.SKETCH, selectedPersonas, 'discussion')}
                     usageInfo={usage?.sketch}
                     loading={usageLoading}
                   />
@@ -548,7 +548,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
                     icon={<Layers size={20} />}
                     colorTheme="blue"
                     recommended={usage?.mvp?.available !== false}
-                    onSelect={() => onSelect('ai', ValidationLevel.MVP, selectedPersonas)}
+                    onSelect={() => onSelect('ai', ValidationLevel.MVP, selectedPersonas, 'discussion')}
                     usageInfo={usage?.mvp}
                     loading={usageLoading}
                   />
@@ -560,7 +560,7 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
                     desc="투자 심사 시뮬레이션. 공격적인 질문을 통해 비즈니스 모델을 검증합니다."
                     icon={<Sword size={20} />}
                     colorTheme="red"
-                    onSelect={() => onSelect('ai', ValidationLevel.DEFENSE, selectedPersonas)}
+                    onSelect={() => onSelect('ai', ValidationLevel.DEFENSE, selectedPersonas, 'discussion')}
                     usageInfo={usage?.defense}
                     loading={usageLoading}
                   />

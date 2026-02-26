@@ -36,6 +36,8 @@ const config: Config = {
         float: 'float 6s ease-in-out infinite',
         'float-delayed': 'float 6s ease-in-out infinite 2s',
         'float-slow': 'float 8s ease-in-out infinite 1s',
+        fadeIn: 'fadeIn 0.3s ease-out forwards',
+        fadeInUp: 'fadeInUp 0.4s ease-out forwards',
       },
       keyframes: {
         marquee: {
@@ -67,6 +69,14 @@ const config: Config = {
         float: {
           '0%, 100%': { transform: 'translateY(0px)' },
           '50%': { transform: 'translateY(-10px)' },
+        },
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' },
+        },
+        fadeInUp: {
+          '0%': { opacity: '0', transform: 'translateY(20px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
         },
       },
     },

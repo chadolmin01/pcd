@@ -1,5 +1,16 @@
 export type PersonaRole = 'Developer' | 'Designer' | 'VC' | 'Marketer' | 'Legal' | 'PM' | 'CTO' | 'CFO' | 'EndUser' | 'Operations' | 'System';
 
+// 인터랙션 모드: 개별 조언 vs 토론
+export type InteractionMode = 'individual' | 'discussion';
+
+// 토론 모드에서 각 턴의 메시지
+export interface DiscussionTurn {
+  persona: PersonaRole;
+  message: string;
+  replyTo?: PersonaRole | null;  // 누구에게 답하는지 (null이면 아이디어에 대한 첫 발언)
+  tone: 'agree' | 'disagree' | 'question' | 'suggestion' | 'neutral';
+}
+
 // 페르소나 프리셋 정의
 export interface PersonaPreset {
   id: PersonaRole;
@@ -151,12 +162,41 @@ export interface AnalysisMetrics {
   summary: string; // Brief status summary
 }
 
+// 입력 관련성 판단 결과
+export interface InputRelevance {
+  isRelevant: boolean;
+  reason?: string;
+  warningMessage?: string;
+}
+
 export interface AnalysisResult {
   responses: PersonaResponse[];
   metrics: AnalysisMetrics;
   ideaCategory?: string;  // AI가 분류한 아이디어 카테고리 (핀테크, 헬스케어 등)
   scorecard?: Scorecard;           // Progressive scorecard (신규)
   categoryUpdates?: CategoryUpdate[]; // 이번 턴의 점수 변동 내역 (신규)
+  discussion?: DiscussionTurn[];   // 토론 모드일 때 페르소나 간 대화
+  inputRelevance?: InputRelevance; // 입력 관련성 판단 (신규)
+  warning?: string;                // 경고 메시지 (신규)
+}
+
+// 개별 의견 (병렬 호출 결과)
+export interface PersonaOpinion {
+  persona: string;
+  message: string;
+  tone?: 'positive' | 'concern' | 'neutral';  // 긍정/우려/중립
+}
+
+// 결정 멘트
+export interface ClosingRemark {
+  persona: string;
+  message: string;
+}
+
+// 대기 중 대화
+export interface WaitingMessage {
+  persona: string;
+  message: string;
 }
 
 export interface ChatMessage {
@@ -164,7 +204,13 @@ export interface ChatMessage {
   isUser: boolean;
   text?: string;
   responses?: PersonaResponse[]; // AI responses come as a set of persona comments
+  discussion?: DiscussionTurn[]; // 토론 모드일 때 페르소나 간 대화
+  opinions?: PersonaOpinion[]; // 병렬 모드: 개별 의견
+  closingRemarks?: ClosingRemark[]; // 병렬 모드: 결정 멘트
+  waitingMessages?: WaitingMessage[]; // 병렬 모드: 합성 대기 중 대화
   timestamp: number;
+  isStreaming?: boolean; // 스트리밍 중인지 여부
+  streamPhase?: 'opinions' | 'closing' | 'waiting' | 'discussion' | 'final'; // 스트리밍 단계
 }
 
 export interface PersonaScores {
@@ -274,6 +320,29 @@ export interface CategoryUpdate {
   category: ScorecardCategory;
   delta: number;    // 증가 점수 (양수만)
   reason: string;   // 한글 설명
+}
+
+// ============================================
+// Reflection History System (2026 Staff-level)
+// ============================================
+
+// 사용자가 선택한 반영 사항 (확장)
+export interface StagedReflection {
+  role: PersonaRole;
+  reflectedText: string;
+  turn: number;                           // 어떤 턴에서 결정되었는지
+  impactScore?: 'low' | 'medium' | 'high'; // 영향도 (향후 LLM이 평가)
+  linkedCategories?: ScorecardCategory[]; // 연관된 스코어카드 카테고리
+}
+
+// 점수 변화 추적
+export interface ScoreEvolution {
+  category: ScorecardCategory;
+  turn: number;
+  from: number;
+  to: number;
+  delta: number;
+  reason: string;
 }
 
 // 카테고리 메타데이터

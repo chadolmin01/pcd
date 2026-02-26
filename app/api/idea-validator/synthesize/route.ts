@@ -7,6 +7,10 @@ import {
   ChatMessage,
   createEmptyScorecard
 } from '@/components/idea-validator/types';
+import {
+  BusinessPlanResponseSchema,
+  extractAndParseJson,
+} from '@/lib/validations';
 
 const apiKey = process.env.GEMINI_API_KEY;
 if (!apiKey) {
@@ -130,7 +134,14 @@ export const POST = withRateLimit(async (request: NextRequest) => {
       );
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    // JSON 강제 출력 설정
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-2.0-flash',
+      generationConfig: {
+        responseMimeType: 'application/json',
+        temperature: 0.7,
+      }
+    });
 
     const conversationText = formatConversationForSynthesis(conversationHistory);
     const reflectedText = summarizeReflectedAdvice(reflectedAdvice);
@@ -222,24 +233,19 @@ JSON만 출력하세요. 설명이나 마크다운 코드블록 없이 순수 JS
     const result = await model.generateContent(prompt);
     const text = result.response.text();
 
-    // JSON 추출 (마크다운 코드블록 제거)
-    let jsonStr = text;
-    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[1].trim();
-    } else {
-      // 코드블록 없이 바로 JSON인 경우
-      jsonStr = text.trim();
+    // JSON 파싱 + Zod 검증 (안전한 방식)
+    const parseResult = extractAndParseJson(text, BusinessPlanResponseSchema);
+
+    if (!parseResult.success) {
+      console.error('Synthesis JSON parse/validation error:', parseResult.error);
+      console.error('Raw response:', parseResult.raw);
+      return NextResponse.json(
+        { success: false, error: '사업계획서 생성 결과를 처리할 수 없습니다. 다시 시도해주세요.' },
+        { status: 500 }
+      );
     }
 
-    // JSON 파싱
-    let parsed: ParsedBusinessPlan;
-    try {
-      parsed = JSON.parse(jsonStr) as ParsedBusinessPlan;
-    } catch (parseError) {
-      console.error('JSON parse error:', parseError);
-      throw new Error('Failed to parse synthesis result');
-    }
+    const parsed = parseResult.data;
 
     // BusinessPlanData 형식으로 변환 (undefined 필드를 기본값으로 대체)
     const defaultBasicInfo = {

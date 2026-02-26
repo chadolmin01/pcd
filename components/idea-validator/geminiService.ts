@@ -1,4 +1,23 @@
-import { AnalysisResult, Artifacts, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, Scorecard, createEmptyScorecard, BusinessPlanData, ChatMessage } from "./types";
+import { AnalysisResult, Artifacts, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, Scorecard, createEmptyScorecard, BusinessPlanData, ChatMessage, InteractionMode, DiscussionTurn, StagedReflection, ScoreEvolution } from "./types";
+
+// 스트리밍 콜백 타입
+export interface StreamingCallbacks {
+  onDiscussionTurn: (turn: DiscussionTurn) => void;
+  onFinalResponse: (result: AnalysisResult) => void;
+  onError: (error: Error) => void;
+  onWarning?: (message: string) => void; // 입력 관련성 경고
+}
+
+// 병렬 스트리밍 콜백 타입 (방안 5)
+export interface ParallelStreamingCallbacks {
+  onOpinion: (data: { persona: string; message: string }) => void;
+  onClosing: (data: { persona: string; message: string }) => void;
+  onWaiting: (data: { persona: string; message: string }) => void;
+  onDiscussionTurn: (turn: DiscussionTurn) => void;
+  onFinalResponse: (result: AnalysisResult) => void;
+  onError: (error: Error) => void;
+  onWarning?: (message: string) => void; // 입력 관련성 경고
+}
 
 // 레벨 변환 (프론트엔드 enum -> 백엔드 string)
 const convertLevel = (level: ValidationLevel): string => {
@@ -19,7 +38,8 @@ export const analyzeIdea = async (
   level: ValidationLevel = ValidationLevel.MVP,
   personas: PersonaRole[] = DEFAULT_PERSONAS,
   currentScorecard: Scorecard | null = null,
-  turnNumber: number = 1
+  turnNumber: number = 1,
+  interactionMode: InteractionMode = 'individual'
 ): Promise<AnalysisResult> => {
   try {
     const backendLevel = convertLevel(level);
@@ -33,7 +53,8 @@ export const analyzeIdea = async (
         level: backendLevel,
         personas,
         currentScorecard,
-        turnNumber
+        turnNumber,
+        interactionMode
       })
     });
 
@@ -47,7 +68,13 @@ export const analyzeIdea = async (
       throw new Error(data.error || 'Analysis failed');
     }
 
-    return data.result as AnalysisResult;
+    // 경고 메시지가 있으면 결과에 포함
+    const result = data.result as AnalysisResult;
+    if (data.warning) {
+      result.warning = data.warning;
+    }
+
+    return result;
 
   } catch (error) {
     console.error("Analysis Error:", error);
@@ -133,6 +160,204 @@ export const generateFinalArtifacts = async (
       personaScores: { developer: 0, designer: 0, vc: 0 },
       actionPlan: { developer: [], designer: [], vc: [] }
     };
+  }
+};
+
+// 병렬 토론 모드 API 호출 (방안 5: Two-Tier Model Routing + Staff-level Reflection)
+export const analyzeIdeaParallel = async (
+  idea: string,
+  conversationHistory: string[] = [],
+  level: ValidationLevel = ValidationLevel.MVP,
+  personas: PersonaRole[] = DEFAULT_PERSONAS,
+  currentScorecard: Scorecard | null = null,
+  turnNumber: number = 1,
+  callbacks: ParallelStreamingCallbacks,
+  // Staff-level reflection history (Phase 2)
+  stagedReflections: StagedReflection[] = [],
+  scoreEvolution: ScoreEvolution[] = []
+): Promise<void> => {
+  try {
+    const backendLevel = convertLevel(level);
+
+    const response = await fetch('/api/idea-validator/analyze-parallel', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idea,
+        conversationHistory,
+        level: backendLevel,
+        personas,
+        currentScorecard,
+        turnNumber,
+        // Staff-level reflection history
+        stagedReflections,
+        scoreEvolution,
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No reader available');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE 메시지는 \n\n으로 구분됨
+      let boundary = buffer.indexOf('\n\n');
+      while (boundary !== -1) {
+        const line = buffer.slice(0, boundary);
+        buffer = buffer.slice(boundary + 2);
+
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+
+          if (data === '[DONE]') {
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+
+            switch (parsed.type) {
+              case 'opinion':
+                callbacks.onOpinion(parsed.data);
+                break;
+              case 'closing':
+                callbacks.onClosing(parsed.data);
+                break;
+              case 'waiting':
+                callbacks.onWaiting(parsed.data);
+                break;
+              case 'discussion':
+                callbacks.onDiscussionTurn(parsed.data as DiscussionTurn);
+                break;
+              case 'final':
+                // 경고 메시지가 있으면 결과에 포함
+                const finalResult = parsed.data as AnalysisResult;
+                if (parsed.data.warning) {
+                  finalResult.warning = parsed.data.warning;
+                }
+                callbacks.onFinalResponse(finalResult);
+                break;
+              case 'warning':
+                // 입력 관련성 경고 이벤트
+                if (callbacks.onWarning && parsed.data.warning) {
+                  callbacks.onWarning(parsed.data.warning);
+                }
+                break;
+              case 'error':
+                callbacks.onError(new Error(parsed.data.message));
+                break;
+            }
+          } catch {
+            // JSON 파싱 실패 - 무시
+          }
+        }
+
+        // 다음 메시지 경계 찾기
+        boundary = buffer.indexOf('\n\n');
+      }
+    }
+  } catch (error) {
+    console.error("Parallel Streaming Error:", error);
+    callbacks.onError(error instanceof Error ? error : new Error('Streaming failed'));
+  }
+};
+
+// 스트리밍 토론 모드 API 호출 (레거시)
+export const analyzeIdeaStream = async (
+  idea: string,
+  conversationHistory: string[] = [],
+  level: ValidationLevel = ValidationLevel.MVP,
+  personas: PersonaRole[] = DEFAULT_PERSONAS,
+  currentScorecard: Scorecard | null = null,
+  turnNumber: number = 1,
+  callbacks: StreamingCallbacks
+): Promise<void> => {
+  try {
+    const backendLevel = convertLevel(level);
+
+    const response = await fetch('/api/idea-validator/analyze-stream', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        idea,
+        conversationHistory,
+        level: backendLevel,
+        personas,
+        currentScorecard,
+        turnNumber,
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
+    const reader = response.body?.getReader();
+    if (!reader) {
+      throw new Error('No reader available');
+    }
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      // SSE 이벤트 파싱
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || ''; // 마지막 불완전한 라인은 버퍼에 유지
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const data = line.slice(6);
+
+          if (data === '[DONE]') {
+            return;
+          }
+
+          try {
+            const parsed = JSON.parse(data);
+
+            if (parsed.type === 'turn') {
+              callbacks.onDiscussionTurn(parsed.data as DiscussionTurn);
+            } else if (parsed.type === 'final') {
+              // 경고 메시지가 있으면 결과에 포함
+              const finalResult = parsed.data as AnalysisResult;
+              if (parsed.data.warning) {
+                finalResult.warning = parsed.data.warning;
+              }
+              callbacks.onFinalResponse(finalResult);
+            } else if (parsed.type === 'warning') {
+              // 입력 관련성 경고 이벤트
+              if (callbacks.onWarning && parsed.data.warning) {
+                callbacks.onWarning(parsed.data.warning);
+              }
+            }
+          } catch {
+            // JSON 파싱 실패 - 무시
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Streaming Analysis Error:", error);
+    callbacks.onError(error instanceof Error ? error : new Error('Streaming failed'));
   }
 };
 

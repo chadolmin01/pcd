@@ -1,0 +1,147 @@
+{
+  "summary": "Draft AI의 MVP는 초기 창업자 및 예비 창업자를 위한 핵심 기능에 집중합니다. 2개의 필수 기능을 우선 개발하고, 이후 점진적으로 확장합니다.",
+  "coreFeatures": [
+    {
+      "priority": 1,
+      "name": "법률 전문가 등",
+      "description": "법률 전문가 등 10개 멀티 페르소나 AI 시스템을 통해 다각도의 피드백 제공",
+      "complexity": "high"
+    },
+    {
+      "priority": 1,
+      "name": "실시간 대화형 검증으로",
+      "description": "실시간 대화형 검증으로 아이디어를 점진적으로 발전",
+      "complexity": "medium"
+    },
+    {
+      "priority": 2,
+      "name": "단순 챗봇이 아닌",
+      "description": "단순 챗봇이 아닌 전문가 관점별 구체적인 조언과 8개 카테고리 점수 기반 평가 시스템, 사업계획서 자동 생성, Word/PDF 내보내기 지원",
+      "complexity": "medium"
+    },
+    {
+      "priority": 3,
+      "name": "사용자 인증",
+      "description": "회원가입, 로그인, 비밀번호 찾기",
+      "complexity": "low"
+    },
+    {
+      "priority": 3,
+      "name": "관리자 대시보드",
+      "description": "기본 통계 및 사용자 관리",
+      "complexity": "medium"
+    }
+  ],
+  "techStack": [
+    {
+      "category": "프론트엔드",
+      "recommended": "Next.js + TypeScript",
+      "alternatives": [
+        "React + Vite",
+        "Vue.js",
+        "Svelte"
+      ],
+      "reasoning": "SEO, 성능 최적화, 풀스택 개발이 가능한 프레임워크"
+    },
+    {
+      "category": "스타일링",
+      "recommended": "Tailwind CSS",
+      "alternatives": [
+        "styled-components",
+        "CSS Modules",
+        "Chakra UI"
+      ],
+      "reasoning": "빠른 프로토타이핑과 일관된 디자인 시스템 구축"
+    },
+    {
+      "category": "백엔드",
+      "recommended": "Next.js API Routes",
+      "alternatives": [
+        "Express.js",
+        "Fastify",
+        "NestJS"
+      ],
+      "reasoning": "프론트엔드와 통합된 개발 환경으로 빠른 MVP 개발"
+    },
+    {
+      "category": "데이터베이스",
+      "recommended": "Supabase (PostgreSQL)",
+      "alternatives": [
+        "Firebase",
+        "PlanetScale",
+        "MongoDB"
+      ],
+      "reasoning": "실시간 기능, 인증, 스토리지가 포함된 올인원 솔루션"
+    },
+    {
+      "category": "배포",
+      "recommended": "Vercel",
+      "alternatives": [
+        "Netlify",
+        "Railway",
+        "AWS Amplify"
+      ],
+      "reasoning": "Next.js 최적화, 자동 배포, 글로벌 CDN"
+    },
+    {
+      "category": "AI/ML",
+      "recommended": "OpenAI API / Claude API",
+      "alternatives": [
+        "Hugging Face",
+        "Google AI",
+        "AWS Bedrock"
+      ],
+      "reasoning": "빠른 AI 기능 통합, 프로덕션 레벨 품질"
+    },
+    {
+      "category": "인증",
+      "recommended": "NextAuth.js",
+      "alternatives": [
+        "Auth0",
+        "Clerk",
+        "Supabase Auth"
+      ],
+      "reasoning": "SSO, 소셜 로그인, 팀 관리 기능"
+    }
+  ],
+  "roadmap": [
+    {
+      "phase": "Phase 1: MVP 개발",
+      "duration": "2024.01-03",
+      "tasks": [
+        "핵심 기능 개발 및 테스트"
+      ],
+      "deliverables": [
+        "MVP 개발 완료"
+      ]
+    },
+    {
+      "phase": "Phase 2: 베타 테스트",
+      "duration": "2024.04-05",
+      "tasks": [
+        "100명 대상 베타 서비스"
+      ],
+      "deliverables": [
+        "베타 테스트 완료"
+      ]
+    },
+    {
+      "phase": "Phase 3: 정식 출시",
+      "duration": "2024.06",
+      "tasks": [
+        "마케팅 및 정식 서비스 오픈"
+      ],
+      "deliverables": [
+        "정식 출시 완료"
+      ]
+    }
+  ],
+  "estimatedTimeline": "약 1518개월",
+  "keyMetrics": [
+    "DAU/MAU (일간/월간 활성 사용자)",
+    "Retention Rate (재방문율)",
+    "NPS (순추천지수)",
+    "CAC (고객 획득 비용)",
+    "LTV (고객 생애 가치)"
+  ]
+}

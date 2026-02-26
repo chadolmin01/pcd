@@ -1,5 +1,6 @@
 /**
  * AI 분석 프롬프트 템플릿
+ * Anthropic 권장 방식: XML 태그 구조화, 명확한 섹션 분리, 간결한 지침
  */
 
 import { getKnowledgeBaseForPrompt, getFullKnowledgeBase } from '@/lib/knowledge-base/startup-criteria';
@@ -8,237 +9,401 @@ import {
   CATEGORY_INFO,
   PERSONA_DESCRIPTIONS,
   PERSONA_CATEGORY_MAP,
-  TARGET_SCORES
+  TARGET_SCORES,
+  Level,
+  getPerspectiveIdsForPrompt,
 } from './persona-config';
 import { buildScorecardStatus } from './scorecard-utils';
+import { escapePromptContent } from './prompt-security';
+
+// 레벨별 설정 (string 인덱스 허용 - 외부 호출 호환성)
+const LEVEL_CONFIG: Record<string, { name: string; goal: string; tone: string }> = {
+  sketch: {
+    name: 'Sketch',
+    goal: '아이디어 구체화 및 동기 부여',
+    tone: '친절하고 협력적. 3문장 이내. 쉬운 언어 사용.'
+  },
+  mvp: {
+    name: 'MVP',
+    goal: '현실적 제품 출시를 위한 핵심 기능 집중',
+    tone: '논리적이고 실무 중심. 건설적 비판.'
+  },
+  investor: {
+    name: 'Defense',
+    goal: '투자자 관점의 철저한 검증',
+    tone: '냉철하고 비판적. 전문 용어 사용. VC 기준 엄격 적용.'
+  }
+};
+
+/**
+ * 개별 의견용 간단한 시스템 인스트럭션 (Flash 모델용)
+ * JSON 출력 지시 없이 텍스트 응답만 유도
+ */
+export function getSimpleSystemInstruction(persona: string): string {
+  const desc = PERSONA_DESCRIPTIONS[persona];
+  return `당신은 ${desc?.nameKo || persona}입니다.
+전문 분야: ${desc?.focus || persona}
+언어: 한국어
+응답 형식: 2-3문장의 간결한 텍스트 (JSON 아님)`;
+}
 
 export function getAnalyzeSystemInstruction(level: string, personas: string[]): string {
-  const personaDescriptions = personas
-    .map((p, idx) => {
+  const config = LEVEL_CONFIG[level] || LEVEL_CONFIG.mvp;
+
+  const personaList = personas
+    .map(p => {
       const desc = PERSONA_DESCRIPTIONS[p];
-      if (!desc) return '';
-      return `${idx + 1}. "${desc.nameKo}" (${p}): ${desc.focus}`;
+      return desc ? `- ${desc.nameKo} (${p}): ${desc.focus}` : '';
     })
     .filter(Boolean)
-    .join('\n      ');
+    .join('\n');
 
   const personaKnowledge = personas
     .map(p => getKnowledgeBaseForPrompt(p))
     .join('\n');
 
-  const baseInstruction = `당신은 "Draft." 스타트업 아이디어 검증 엔진입니다. 사용자가 아이디어를 입력하면 선택된 ${personas.length}가지 페르소나로 응답합니다. 한국어로 응답하십시오.
+  return `<role>
+스타트업 아이디어 검증 엔진 "Draft."
+언어: 한국어
+</role>
 
-선택된 페르소나:
-      ${personaDescriptions}
+<personas>
+${personaList}
+</personas>
 
+<level name="${config.name}">
+목표: ${config.goal}
+톤: ${config.tone}
+</level>
+
+<knowledge_base>
 ${getFullKnowledgeBase()}
 
-**[페르소나별 심화 지식]**
+<persona_expertise>
 ${personaKnowledge}
+</persona_expertise>
 
-**[Knowledge Base 활용 규칙]**
-1. 레드플래그 발견 시 → 즉시 지적하고 개선 방향 제시
-2. 성공 패턴과 유사하면 → 해당 사례 언급하며 격려
-3. 투자자 질문 중 답변 안 된 것 → 자연스럽게 유도
-4. 시장/수익 숫자 언급 시 → VC 기준과 비교 평가`;
+<usage_rules>
+- 레드플래그 발견 → 지적 + 개선 방향 제시
+- 성공 패턴 유사 → 해당 사례 언급
+- 투자자 질문 미답변 → 자연스럽게 유도
+- 시장/수익 숫자 → VC 기준과 비교
+</usage_rules>
+</knowledge_base>
 
-  const levelInstructions: Record<string, string> = {
-    sketch: `
-    **[Level 1: 아이디어 스케치 단계]**
-    - 목표: 창업자가 아이디어를 구체화하도록 돕고 동기를 부여합니다.
-    - 태도: 친절하고, 협력적이며, 이해하기 쉬운 언어를 사용하세요.
-    - 제약: 답변을 짧고 명료하게(3문장 이내) 유지하세요. 어려운 전문 용어 사용을 지양하세요.
-    - Knowledge Base: 레드플래그는 부드럽게 언급, 성공 사례는 동기부여용으로 활용`,
+<input_validation>
+사용자 입력이 아이디어 발전에 관련이 있는지 판단하세요.
 
-    investor: `
-    **[Level 3: 투자자 방어(Hardcore) 단계]**
-    - 목표: 창업자의 논리를 극한까지 검증하고 약점을 파고듭니다.
-    - 태도: 매우 냉소적이고, 비판적이며, 전문적인 용어를 사용하세요. 봐주지 마세요.
-    - 제약: 창업자가 논리적으로 방어하지 못하면 점수를 낮게 책정하세요.
-    - Knowledge Base: VC 기준 엄격 적용, 투자자 질문 7개 모두 검증, 레드플래그 즉시 지적`,
+관련 없음 (isRelevant: false) 판단 기준:
+- 의미없는 문자열 (예: "ㅋㅋㅋ", "asdf", "...")
+- 주제와 무관한 내용 (예: 날씨, 인사말만, 장난)
+- 너무 짧아서 의미 파악 불가 (예: "네", "좋아요"만)
+- 욕설이나 비속어만 포함
 
-    mvp: `
-    **[Level 2: MVP 빌딩 단계]**
-    - 목표: 현실적인 제품 출시를 위해 불필요한 기능을 덜어냅니다.
-    - 태도: 논리적이고, 현실적이며, 실무 중심적입니다.
-    - 제약: 현실적인 제약을 근거로 피드백을 제공하세요.
-    - Knowledge Base: 성공 사례의 MVP 전략 참고, 레드플래그는 건설적으로 지적`
-  };
+관련 있음 (isRelevant: true) 판단 기준:
+- 아이디어에 대한 구체적 설명
+- 질문에 대한 답변
+- 피드백 수용/거절 의사 표현
+- 추가 정보 제공
 
-  return `${baseInstruction}${levelInstructions[level] || levelInstructions.mvp}`;
+관련 없으면 warningMessage에 친절한 안내 메시지를 포함하세요.
+</input_validation>`;
 }
 
+// 스코어카드 헬퍼: null-safe 접근 및 일관된 포맷
+function getScorecardValue(scorecard: Scorecard | null, category: keyof Scorecard): number {
+  if (!scorecard || category === 'totalScore') return 0;
+  return scorecard[category]?.current ?? 0;
+}
+
+function getScorecardFilled(scorecard: Scorecard | null, category: keyof Scorecard): boolean {
+  if (!scorecard || category === 'totalScore') return false;
+  return scorecard[category]?.filled ?? false;
+}
+
+/**
+ * 분석 프롬프트 생성
+ * @param idea - 사용자의 아이디어 입력
+ * @param historyContext - 이전 대화 기록
+ * @param personas - 페르소나 목록 (최소 1개)
+ * @param scorecard - 현재 스코어카드 (null이면 새 세션)
+ * @param turnNumber - 현재 턴 (1-8)
+ * @param level - 검증 레벨
+ */
 export function buildAnalyzePrompt(
   idea: string,
   historyContext: string,
   personas: string[],
   scorecard: Scorecard | null,
   turnNumber: number = 1,
-  level: string = 'mvp'
+  level: Level = 'mvp'
 ): string {
-  const currentTotal = scorecard?.totalScore || 0;
-  const targetScore = TARGET_SCORES[level] || 65;
+  const currentTotal = scorecard?.totalScore ?? 0;
+  const targetScore = TARGET_SCORES[level] ?? 65;
   const remainingTurns = Math.max(1, 8 - turnNumber);
-  const expectedPerTurn = Math.ceil((targetScore - currentTotal) / remainingTurns);
+  const minIncrease = Math.max(5, Math.ceil((targetScore - currentTotal) / remainingTurns));
 
-  const personaCategoryInfo = personas.map(p => {
+  const personaCategories = personas.map(p => {
     const map = PERSONA_CATEGORY_MAP[p];
     const desc = PERSONA_DESCRIPTIONS[p];
-    return `- ${desc?.nameKo || p}: 주로 [${map?.primary.map(c => CATEGORY_INFO[c]?.nameKo).join(', ')}] 점수를 올림, 가끔 [${map?.secondary.map(c => CATEGORY_INFO[c]?.nameKo).join(', ')}]도 가능`;
+    const primary = map?.primary.map(c => CATEGORY_INFO[c]?.nameKo).filter(Boolean).join(', ') || '미정의';
+    return `${desc?.nameKo || p}: ${primary}`;
   }).join('\n');
 
   const scorecardStatus = buildScorecardStatus(scorecard);
 
-  return `${historyContext}
+  // 프롬프트 인젝션 방지를 위한 이스케이프
+  const safeIdea = escapePromptContent(idea);
+  const safeHistory = escapePromptContent(historyContext);
+
+  return `<context>
+${safeHistory}
 ${scorecardStatus}
+</context>
 
-사용자 입력: "${idea}"
+<user_input>
+${safeIdea}
+</user_input>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📌 게임 규칙: 이것은 "성장하는 게임"입니다
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<game_state>
+턴: ${turnNumber}/8
+현재: ${currentTotal}점 → 목표: ${targetScore}점
+이번 턴 최소 증가: +${minIncrease}점
+</game_state>
 
-**핵심 원칙:**
-- 대화가 진행될수록 점수는 반드시 우상향합니다
-- 유저가 어떤 답을 해도 최소 +3점은 올라갑니다
-- 좋은 답변이면 +5~10점이 올라갑니다
-- 매 턴마다 최소 1개 카테고리가 반드시 올라가야 합니다
+<scoring_rules>
+점수는 항상 증가합니다 (감소 없음).
 
-**현재 상태:**
-- 턴: ${turnNumber}/8
-- 현재 점수: ${currentTotal}점
-- 목표 점수: ${targetScore}점 (${level === 'sketch' ? 'Sketch' : level === 'investor' ? 'Defense' : 'MVP'} 등록)
-- 권장 페이스: 이번 턴 +${Math.max(5, expectedPerTurn)}점 이상
+증가 기준:
+- 새 정보 제공: +3~5
+- 선택지 선택: +2~4
+- 직접 답변 작성: +4~6
+- 피드백 반영하여 수정: +5~8
+- 숫자/데이터 언급: +3~5
 
-**[점수 진행 예시 - 대화할수록 반드시 우상향]**
-- 1턴 후: totalScore 12~18 (첫 아이디어 입력)
-- 3턴 후: totalScore 30~40 (기본 컨셉 확립)
-- 6턴 후: totalScore 50~65 (세부사항 구체화)
-- 8턴 후: totalScore 65~80 (검증 완료)
+feedbackReflection 증가 조건:
+- "[종합 결정 사항]" 또는 결정 표명("~할게요", "~로 정했어요") → +2~5
+</scoring_rules>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📊 점수 증가 트리거 (구체적 조건)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<persona_categories>
+${personaCategories}
+각 페르소나는 담당 카테고리 점수를 올립니다.
+⚠️ 표시된 낮은 카테고리는 조언 중 자연스럽게 유도하세요.
+</persona_categories>
 
-| 유저 행동 | 점수 증가 |
-|-----------|-----------|
-| 새로운 정보 제공 (아이디어, 기능, 타겟 등) | +3~5 |
-| 제시된 선택지 중 하나 선택 | +2~4 |
-| 자기만의 답변 직접 작성 | +4~6 |
-| 페르소나 조언을 반영해 수정/발전 | +5~8 |
-| 구체적 숫자/데이터 언급 | +3~5 |
+<perspective_ids>
+각 페르소나는 아래 ID만 사용:
+${getPerspectiveIdsForPrompt(personas)}
+</perspective_ids>
 
-**🔔 피드백 반영 (feedbackReflection) 특별 규칙:**
-- "[종합 결정 사항]" 또는 "[User ACCEPTED & DECIDED]"가 입력에 포함되면 → feedbackReflection +3~5
-- 유저가 "~할게요", "~로 정했어요", "~를 선택"처럼 결정을 표명하면 → feedbackReflection +2~3
-- 이 카테고리는 유저가 적극적으로 피드백을 수용할 때 올라갑니다
+<current_scores>
+problemDefinition: ${getScorecardValue(scorecard, 'problemDefinition')}/15
+solution: ${getScorecardValue(scorecard, 'solution')}/15
+marketAnalysis: ${getScorecardValue(scorecard, 'marketAnalysis')}/10
+revenueModel: ${getScorecardValue(scorecard, 'revenueModel')}/10
+differentiation: ${getScorecardValue(scorecard, 'differentiation')}/10
+logicalConsistency: ${getScorecardValue(scorecard, 'logicalConsistency')}/15
+feasibility: ${getScorecardValue(scorecard, 'feasibility')}/15
+feedbackReflection: ${getScorecardValue(scorecard, 'feedbackReflection')}/10
+totalScore: ${currentTotal} → 목표: ${currentTotal + minIncrease}+
+</current_scores>
 
-**절대 규칙:**
-- 점수 감소는 없습니다
-- 모든 카테고리 점수는 이전보다 같거나 높아야 합니다
-- delta가 0인 카테고리는 categoryUpdates에 포함하지 마세요
+<instructions>
+- responses: 각 페르소나가 3가지 perspectives로 조언 (perspectiveId는 위 허용 목록에서만)
+- metrics: keyRisks, keyStrengths, summary 포함
+- scorecard: 각 카테고리 current 값 업데이트 (감소 불가, max 초과 불가)
+- categoryUpdates: 변경된 카테고리와 delta, reason
+- inputRelevance: 입력이 관련 없으면 isRelevant=false, warningMessage 포함
+</instructions>`;
+}
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-👥 페르소나별 담당 카테고리
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+/**
+ * 스트리밍 토론 모드용 프롬프트 빌더
+ * @param personas - 최소 3개의 페르소나 필요
+ */
+export function buildStreamingDiscussionPrompt(
+  idea: string,
+  historyContext: string,
+  personas: string[],
+  scorecard: Scorecard | null,
+  turnNumber: number = 1,
+  level: Level = 'mvp'
+): string {
+  // 페르소나 최소 3개 보장 (기본값 사용)
+  const p0 = personas[0] || 'Developer';
+  const p1 = personas[1] || 'Designer';
+  const p2 = personas[2] || 'VC';
+  const safePersonas = [p0, p1, p2];
 
-${personaCategoryInfo}
+  const currentTotal = scorecard?.totalScore ?? 0;
+  const targetScore = TARGET_SCORES[level] ?? 65;
+  const minIncrease = Math.max(5, Math.ceil((targetScore - currentTotal) / Math.max(1, 8 - turnNumber)));
 
-각 페르소나는 자신의 담당 카테고리 점수를 올려주세요.
+  const personaNames = safePersonas.map(p => PERSONA_DESCRIPTIONS[p]?.nameKo || p).join(', ');
+  const personaCategories = safePersonas.map(p => {
+    const map = PERSONA_CATEGORY_MAP[p];
+    const desc = PERSONA_DESCRIPTIONS[p];
+    return `${desc?.nameKo || p}: ${map?.primary.map(c => CATEGORY_INFO[c]?.nameKo).filter(Boolean).join(', ') || '미정의'}`;
+  }).join('\n');
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-🎯 낮은 카테고리 자연스러운 유도 규칙
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  const scorecardStatus = buildScorecardStatus(scorecard);
 
-위 스코어카드에서 ⚠️ 표시된 카테고리는 점수가 낮습니다.
-각 페르소나는 **본래 조언을 하면서** 자연스럽게 낮은 카테고리 관련 내용을 섞어주세요.
+  // 프롬프트 인젝션 방지를 위한 이스케이프
+  const safeIdea = escapePromptContent(idea);
+  const safeHistory = escapePromptContent(historyContext);
 
-**방법:**
-- 직접적으로 묻지 말고, 맥락 안에서 유도하세요
-- 페르소나의 전문 영역과 연결해서 질문하세요
+  return `<context>
+${safeHistory}
+${scorecardStatus}
+</context>
 
-**예시:**
-Developer가 기술 스택 조언하면서 차별화(differentiation) 유도:
-"Flutter 좋은 선택이에요. 그런데 비슷한 산책 앱 중에 스트라바가 있잖아요. 거기랑 뭐가 다를까요?"
-→ 기술 조언 + 차별화 질문이 한 턴에 해결
+<user_input>
+${safeIdea}
+</user_input>
 
-VC가 수익 모델 조언하면서 시장분석(marketAnalysis) 유도:
-"구독 모델이 좋겠네요. 그런데 이 시장에서 월 5천원을 내는 사람이 얼마나 있을까요?"
-→ 수익 모델 조언 + 시장 규모 질문이 한 턴에 해결
+<mode>실시간 토론: ${personaNames}</mode>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-💡 Perspectives 생성 규칙 (Founder Profile 분석용)
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<game_state>
+턴: ${turnNumber}/8
+현재: ${currentTotal}점 → 목표: ${targetScore}점
+이번 턴 최소 증가: +${minIncrease}점
+</game_state>
 
-⚠️ 중요: perspectiveId는 반드시 아래 목록에서만 선택하세요!
-이 ID는 창업자 성향 분석에 사용되므로 정확히 맞춰야 합니다.
+<output_format>
+각 토론 턴을 ---TURN--- 뒤에 JSON으로, 완료 후 ---FINAL--- 뒤에 최종 JSON을 출력합니다.
 
-**Developer 허용 ID (12개):**
-security(보안), speed(빠른출시), scalability(확장성), data-structure(데이터구조),
-infra-cost(인프라비용), api-design(API설계), realtime(실시간), offline(오프라인),
-ai-ml(AI/ML), location(위치기반), integration(외부연동), performance(성능최적화)
+<example>
+---TURN---
+{"persona": "Developer", "message": "첫 의견", "replyTo": null, "tone": "neutral"}
+---TURN---
+{"persona": "Designer", "message": "동의하며 추가", "replyTo": "Developer", "tone": "agree"}
+---TURN---
+{"persona": "VC", "message": "수익 관점 질문", "replyTo": "Designer", "tone": "question"}
+---TURN---
+{"persona": "Developer", "message": "종합 정리", "replyTo": "VC", "tone": "suggestion"}
+---FINAL---
+{전체 응답 JSON}
+</example>
+</output_format>
 
-**Designer 허용 ID (12개):**
-usability(사용성), aesthetics(심미성), accessibility(접근성), onboarding(온보딩),
-gamification(게임화), mobile-first(모바일우선), simplicity(단순함), personalization(개인화),
-emotional(감성디자인), consistency(일관성), feedback(피드백UX), trust(신뢰감)
+<discussion_rules>
+- 4-5개 턴, 각 2-3문장
+- tone: agree | disagree | question | suggestion | neutral
+</discussion_rules>
 
-**VC 허용 ID (12개):**
-revenue(수익모델), market-size(시장규모), moat(진입장벽), unit-economics(유닛이코노믹스),
-timing(시장타이밍), team(팀역량), network-effect(네트워크효과), retention(리텐션),
-exit(엑싯전략), regulation(규제환경), global(글로벌확장), viral(바이럴성장)
+<persona_categories>
+${personaCategories}
+</persona_categories>
 
-**사용법:**
-- perspectiveId: 반드시 위 목록의 영어 ID 중 하나 (예: "speed", "usability", "revenue")
-- perspectiveLabel: 한글 라벨은 아이디어 맥락에 맞게 자유롭게 작성
-- content: 해당 관점에서의 구체적 조언
+<perspective_ids>
+${getPerspectiveIdsForPrompt(safePersonas)}
+</perspective_ids>
 
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+<current_scores>
+problemDefinition: ${getScorecardValue(scorecard, 'problemDefinition')}/15
+solution: ${getScorecardValue(scorecard, 'solution')}/15
+marketAnalysis: ${getScorecardValue(scorecard, 'marketAnalysis')}/10
+revenueModel: ${getScorecardValue(scorecard, 'revenueModel')}/10
+differentiation: ${getScorecardValue(scorecard, 'differentiation')}/10
+logicalConsistency: ${getScorecardValue(scorecard, 'logicalConsistency')}/15
+feasibility: ${getScorecardValue(scorecard, 'feasibility')}/15
+feedbackReflection: ${getScorecardValue(scorecard, 'feedbackReflection')}/10
+totalScore: ${currentTotal} → 목표: ${currentTotal + minIncrease}+
+</current_scores>
 
-한국어로 응답하세요. 반드시 다음 JSON 형식으로 응답하세요:
-{
-  "responses": [
-    {
-      "role": "Developer",
-      "name": "개발자",
-      "content": "핵심 피드백 요약 (1문장)",
-      "tone": "Analytical",
-      "suggestedActions": [],
-      "perspectives": [
-        {
-          "perspectiveId": "speed",
-          "perspectiveLabel": "빠른 MVP 출시",
-          "content": "이 관점에서의 구체적인 조언 (2-3문장)",
-          "suggestedActions": ["실행 방안 1", "실행 방안 2"]
-        },
-        { "perspectiveId": "scalability", "perspectiveLabel": "확장 가능한 구조", "content": "...", "suggestedActions": ["..."] },
-        { "perspectiveId": "security", "perspectiveLabel": "보안 우선 설계", "content": "...", "suggestedActions": ["..."] }
-      ]
-    }
-  ],
-  "metrics": {
-    "score": ${currentTotal + Math.max(5, expectedPerTurn)},
-    "developerScore": 70,
-    "designerScore": 80,
-    "vcScore": 75,
-    "keyRisks": ["주요 리스크 1"],
-    "keyStrengths": ["강점 1"],
-    "summary": "전체 요약 (1문장)"
-  },
-  "scorecard": {
-    "problemDefinition": { "current": ${(scorecard?.problemDefinition.current || 0) + 3}, "max": 15, "filled": true },
-    "solution": { "current": ${(scorecard?.solution.current || 0) + 2}, "max": 15, "filled": true },
-    "marketAnalysis": { "current": ${scorecard?.marketAnalysis.current || 0}, "max": 10, "filled": ${scorecard?.marketAnalysis.filled || false} },
-    "revenueModel": { "current": ${scorecard?.revenueModel.current || 0}, "max": 10, "filled": ${scorecard?.revenueModel.filled || false} },
-    "differentiation": { "current": ${scorecard?.differentiation.current || 0}, "max": 10, "filled": ${scorecard?.differentiation.filled || false} },
-    "logicalConsistency": { "current": ${(scorecard?.logicalConsistency.current || 0) + 1}, "max": 15, "filled": true },
-    "feasibility": { "current": ${scorecard?.feasibility.current || 0}, "max": 15, "filled": ${scorecard?.feasibility.filled || false} },
-    "feedbackReflection": { "current": ${scorecard?.feedbackReflection.current || 0}, "max": 10, "filled": ${scorecard?.feedbackReflection.filled || false} },
-    "totalScore": ${currentTotal + Math.max(5, expectedPerTurn)}
-  },
-  "categoryUpdates": [
-    { "category": "problemDefinition", "delta": 3, "reason": "문제 상황을 구체화함" },
-    { "category": "solution", "delta": 2, "reason": "해결 방향 제시" }
-  ]
-}`;
+<final_instructions>
+---FINAL--- 이후 JSON 출력:
+- discussion: 토론 턴들 (이미 스트리밍됨, 다시 포함)
+- responses: 각 페르소나의 최종 제안
+- scorecard: 업데이트된 점수 (감소 불가)
+- categoryUpdates: 변경 내역
+- inputRelevance: 입력 관련성 판단
+</final_instructions>`;
+}
+
+/**
+ * 토론 모드용 프롬프트 빌더 (토론 + 제안 카드 통합) - 비스트리밍 버전
+ * @param personas - 최소 3개의 페르소나 필요
+ */
+export function buildDiscussionPrompt(
+  idea: string,
+  historyContext: string,
+  personas: string[],
+  scorecard: Scorecard | null,
+  turnNumber: number = 1,
+  level: Level = 'mvp'
+): string {
+  // 페르소나 최소 3개 보장 (기본값 사용)
+  const p0 = personas[0] || 'Developer';
+  const p1 = personas[1] || 'Designer';
+  const p2 = personas[2] || 'VC';
+  const safePersonas = [p0, p1, p2];
+
+  const currentTotal = scorecard?.totalScore ?? 0;
+  const targetScore = TARGET_SCORES[level] ?? 65;
+  const minIncrease = Math.max(5, Math.ceil((targetScore - currentTotal) / Math.max(1, 8 - turnNumber)));
+
+  const personaNames = safePersonas.map(p => PERSONA_DESCRIPTIONS[p]?.nameKo || p).join(', ');
+  const personaCategories = safePersonas.map(p => {
+    const map = PERSONA_CATEGORY_MAP[p];
+    const desc = PERSONA_DESCRIPTIONS[p];
+    return `${desc?.nameKo || p}: ${map?.primary.map(c => CATEGORY_INFO[c]?.nameKo).filter(Boolean).join(', ') || '미정의'}`;
+  }).join('\n');
+
+  // 프롬프트 인젝션 방지를 위한 이스케이프
+  const safeIdea = escapePromptContent(idea);
+  const safeHistory = escapePromptContent(historyContext);
+
+  return `<context>
+${safeHistory}
+</context>
+
+<user_input>
+${safeIdea}
+</user_input>
+
+<mode>토론 + 제안: ${personaNames}</mode>
+
+<game_state>
+턴: ${turnNumber}/8
+현재: ${currentTotal}점 → 목표: ${targetScore}점
+이번 턴 최소 증가: +${minIncrease}점
+</game_state>
+
+<workflow>
+1단계 - 토론 (discussion): 4-5개 턴, 각 2-3문장, 동의/반박/질문
+2단계 - 최종 제안 (responses): 각 페르소나가 3가지 관점으로 제안
+</workflow>
+
+<tone_options>
+agree | disagree | question | suggestion | neutral
+</tone_options>
+
+<persona_categories>
+${personaCategories}
+</persona_categories>
+
+<perspective_ids>
+${getPerspectiveIdsForPrompt(safePersonas)}
+</perspective_ids>
+
+<current_scores>
+problemDefinition: ${getScorecardValue(scorecard, 'problemDefinition')}/15
+solution: ${getScorecardValue(scorecard, 'solution')}/15
+marketAnalysis: ${getScorecardValue(scorecard, 'marketAnalysis')}/10
+revenueModel: ${getScorecardValue(scorecard, 'revenueModel')}/10
+differentiation: ${getScorecardValue(scorecard, 'differentiation')}/10
+logicalConsistency: ${getScorecardValue(scorecard, 'logicalConsistency')}/15
+feasibility: ${getScorecardValue(scorecard, 'feasibility')}/15
+feedbackReflection: ${getScorecardValue(scorecard, 'feedbackReflection')}/10
+totalScore: ${currentTotal} → 목표: ${currentTotal + minIncrease}+
+</current_scores>
+
+<instructions>
+- discussion: 4-5턴 토론 (persona, message, replyTo, tone)
+- responses: 각 페르소나 최종 제안 (perspectives 포함)
+- scorecard: 업데이트된 점수 (감소 불가, max: 15,15,10,10,10,15,15,10)
+- categoryUpdates: 변경 내역
+- inputRelevance: 입력 관련성 판단
+</instructions>`;
 }

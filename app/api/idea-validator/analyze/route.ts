@@ -2,62 +2,87 @@ import { NextRequest, NextResponse } from 'next/server';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { withRateLimit } from '@/lib/rate-limit';
 import {
-  CATEGORY_INFO,
-  SCORECARD_CATEGORIES,
-  Scorecard,
   getAnalyzeSystemInstruction,
   buildAnalyzePrompt,
-  isFeedbackResponse,
+  buildDiscussionPrompt,
 } from '@/lib/prompts';
+import {
+  AnalyzeRequestSchema,
+  validateRequest,
+  AnalyzeResponseSchema,
+  safeJsonParse,
+  applyScoreCorrections,
+  preValidateInput,
+  ParsedWithScorecard,
+} from '@/lib/validations';
+import {
+  AnalyzeResponseGeminiSchema,
+  DiscussionResponseGeminiSchema,
+} from '@/lib/schemas/gemini-schemas';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-
-interface CategoryUpdateItem {
-  category: string;
-  delta: number;
-  reason?: string;
-}
-
-interface ParsedResponse {
-  scorecard?: Scorecard;
-  categoryUpdates?: CategoryUpdateItem[];
-  [key: string]: unknown;
-}
 
 // withRateLimit HOF 적용 - AI 엔드포인트로 더 엄격한 제한
 export const POST = withRateLimit(async (request: NextRequest) => {
   try {
-    const {
-      idea,
-      conversationHistory = [],
-      level = 'mvp',
-      personas = ['Developer', 'Designer', 'VC'],
-      currentScorecard = null,
-      turnNumber = 1
-    } = await request.json();
+    // Zod 스키마로 요청 검증
+    const body = await request.json();
+    const validation = validateRequest(body, AnalyzeRequestSchema);
 
-    if (!idea || idea.trim().length === 0) {
+    if (!validation.success) {
       return NextResponse.json(
-        { success: false, error: '아이디어를 입력해주세요.' },
+        { success: false, error: validation.error },
         { status: 400 }
       );
+    }
+
+    const {
+      idea,
+      conversationHistory,
+      level,
+      personas,
+      currentScorecard,
+      turnNumber,
+      interactionMode,
+    } = validation.data;
+
+    // 사전 입력 검증 (명백히 부적절한 입력 필터링)
+    const preValidation = preValidateInput(idea);
+    if (!preValidation.isValid) {
+      return NextResponse.json({
+        success: true,
+        result: {
+          responses: [],
+          warning: preValidation.warning,
+          inputRelevance: { isRelevant: false, warningMessage: preValidation.warning }
+        }
+      });
     }
 
     const historyContext = conversationHistory.length > 0
       ? `[이전 대화 및 결정 내역]:\n${conversationHistory.join('\n')}\n\n`
       : '';
 
-    const prompt = buildAnalyzePrompt(idea, historyContext, personas, currentScorecard, turnNumber, level);
+    // 인터랙션 모드에 따라 다른 프롬프트 사용
+    const prompt = interactionMode === 'discussion'
+      ? buildDiscussionPrompt(idea, historyContext, personas, currentScorecard, turnNumber, level)
+      : buildAnalyzePrompt(idea, historyContext, personas, currentScorecard, turnNumber, level);
 
     // 스코어카드 포함으로 토큰 증가
     const maxTokens = level === 'sketch' ? 1500 : 3000;
     const temperature = level === 'sketch' ? 0.9 : 0.7;
+
+    // Structured Outputs: 인터랙션 모드에 따라 다른 스키마 사용
+    const responseSchema = interactionMode === 'discussion'
+      ? DiscussionResponseGeminiSchema
+      : AnalyzeResponseGeminiSchema;
 
     const model = genAI.getGenerativeModel({
       model: 'gemini-2.0-flash',
       systemInstruction: getAnalyzeSystemInstruction(level, personas),
       generationConfig: {
         responseMimeType: 'application/json',
+        responseSchema,  // Structured Outputs - 스키마 강제
         maxOutputTokens: maxTokens,
         temperature: temperature,
       }
@@ -65,105 +90,34 @@ export const POST = withRateLimit(async (request: NextRequest) => {
 
     const result = await model.generateContent(prompt);
     const text = result.response.text();
-    const parsed: ParsedResponse = JSON.parse(text);
 
-    // 스코어카드 점수 보정 로직 (최소 +2 보장)
-    if (parsed.scorecard) {
-      let recalculatedTotal = 0;
-      let totalIncrease = 0;
+    // JSON 파싱 + Zod 검증 (안전한 방식)
+    const parseResult = safeJsonParse(text, AnalyzeResponseSchema);
 
-      // 🔔 피드백 반영 자동 감지
-      if (isFeedbackResponse(idea) && parsed.scorecard.feedbackReflection) {
-        const feedbackCurrent = parsed.scorecard.feedbackReflection.current || 0;
-        const feedbackMax = 10;
-        const feedbackBonus = Math.min(3, feedbackMax - feedbackCurrent);
-        if (feedbackBonus > 0) {
-          parsed.scorecard.feedbackReflection.current = feedbackCurrent + feedbackBonus;
-          parsed.scorecard.feedbackReflection.filled = true;
-
-          if (!parsed.categoryUpdates) {
-            parsed.categoryUpdates = [];
-          }
-          const existingFeedbackUpdate = parsed.categoryUpdates.find(u => u.category === 'feedbackReflection');
-          if (existingFeedbackUpdate) {
-            existingFeedbackUpdate.delta += feedbackBonus;
-          } else {
-            parsed.categoryUpdates.push({
-              category: 'feedbackReflection',
-              delta: feedbackBonus,
-              reason: '피드백 반영 완료'
-            });
-          }
-        }
-      }
-
-      for (const cat of SCORECARD_CATEGORIES) {
-        const prevScore = currentScorecard?.[cat]?.current || 0;
-        const newScore = parsed.scorecard[cat]?.current || 0;
-        const maxScore = CATEGORY_INFO[cat].max;
-
-        // 점수 감소 방지: 기존 점수보다 낮으면 기존 점수 유지
-        if (newScore < prevScore) {
-          parsed.scorecard[cat].current = prevScore;
-        }
-
-        // 최대 점수 초과 방지
-        if (parsed.scorecard[cat].current > maxScore) {
-          parsed.scorecard[cat].current = maxScore;
-        }
-
-        // filled 상태 유지: 한번 채워지면 계속 filled
-        if (currentScorecard?.[cat]?.filled) {
-          parsed.scorecard[cat].filled = true;
-        }
-
-        // 0보다 크면 filled
-        if (parsed.scorecard[cat].current > 0) {
-          parsed.scorecard[cat].filled = true;
-        }
-
-        totalIncrease += (parsed.scorecard[cat].current - prevScore);
-        recalculatedTotal += parsed.scorecard[cat].current;
-      }
-
-      // 최소 +2점 보장: 대화했는데 점수가 안 올랐으면 강제 가산
-      if (totalIncrease < 2 && currentScorecard) {
-        for (const cat of SCORECARD_CATEGORIES) {
-          const current = parsed.scorecard[cat].current;
-          const max = CATEGORY_INFO[cat].max;
-          if (current < max) {
-            const addAmount = Math.min(2, max - current);
-            parsed.scorecard[cat].current += addAmount;
-            parsed.scorecard[cat].filled = true;
-            recalculatedTotal += addAmount;
-
-            if (!parsed.categoryUpdates) {
-              parsed.categoryUpdates = [];
-            }
-            const existingUpdate = parsed.categoryUpdates.find(u => u.category === cat);
-            if (existingUpdate) {
-              existingUpdate.delta += addAmount;
-            } else {
-              parsed.categoryUpdates.push({
-                category: cat,
-                delta: addAmount,
-                reason: '대화 참여 보너스'
-              });
-            }
-            break;
-          }
-        }
-      }
-
-      parsed.scorecard.totalScore = recalculatedTotal;
-
-      // categoryUpdates에서 delta가 0인 항목 제거
-      if (parsed.categoryUpdates) {
-        parsed.categoryUpdates = parsed.categoryUpdates.filter(u => u.delta > 0);
-      }
+    if (!parseResult.success) {
+      console.error('Analyze JSON parse/validation error:', parseResult.error);
+      return NextResponse.json(
+        { success: false, error: 'AI 응답을 처리할 수 없습니다. 다시 시도해주세요.' },
+        { status: 500 }
+      );
     }
 
-    return NextResponse.json({ success: true, result: parsed });
+    const parsed: ParsedWithScorecard = parseResult.data;
+
+    // 스코어카드 점수 보정 (불변성 유지 - 복사본 반환)
+    const { corrected, result: correctionResult } = applyScoreCorrections(parsed, currentScorecard, idea);
+
+    // 경고 메시지가 있으면 응답에 포함
+    const response: { success: boolean; result: ParsedWithScorecard; warning?: string } = {
+      success: true,
+      result: corrected  // 보정된 복사본 사용
+    };
+
+    if (correctionResult.warning) {
+      response.warning = correctionResult.warning;
+    }
+
+    return NextResponse.json(response);
   } catch (error) {
     console.error('Analyze Error:', error);
     return NextResponse.json(

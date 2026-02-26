@@ -5,7 +5,7 @@ import OnboardingScreen from './OnboardingScreen';
 import SelectionScreen from './SelectionScreen';
 import ChatInterface from './ChatInterface';
 import ResultView from './ResultView';
-import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData, ChatMessage, Scorecard, createEmptyScorecard } from './types';
+import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData, ChatMessage, Scorecard, createEmptyScorecard, InteractionMode } from './types';
 import { validationResultsStore } from '@/lib/validationResultsStore';
 import { toast } from 'sonner';
 import { useUsage } from '@/src/hooks/useUsage';
@@ -30,6 +30,7 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
   const [reflectedAdvice, setReflectedAdvice] = useState<string[]>([]);
   const [selectedLevel, setSelectedLevel] = useState<ValidationLevel>(ValidationLevel.MVP);
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaRole[]>(DEFAULT_PERSONAS);
+  const [interactionMode, setInteractionMode] = useState<InteractionMode>('individual');
   const [userData, setUserData] = useState<OnboardingData | null>(null);
   // 종합 결과물 생성용 추가 상태
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
@@ -45,13 +46,16 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
     toast.success(`${data.name}님, 환영합니다!`);
   };
 
-  const handleSelection = (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[]) => {
+  const handleSelection = (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[], selectedInteractionMode?: InteractionMode) => {
     if (mode === 'ai') {
       if (level) {
         setSelectedLevel(level);
       }
       if (personas) {
         setSelectedPersonas(personas);
+      }
+      if (selectedInteractionMode) {
+        setInteractionMode(selectedInteractionMode);
       }
       setView(AppState.CHAT);
     } else {
@@ -138,6 +142,7 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
               onComplete={handleChatComplete}
               level={selectedLevel}
               personas={selectedPersonas}
+              interactionMode={interactionMode}
               externalInput={externalInput}
               onExternalInputChange={onExternalInputChange}
               hideInput={hideInput}
