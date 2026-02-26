@@ -22,11 +22,11 @@ export const RATE_LIMITS = {
     requestsPerHour: 50,
     requestsPerDay: 200,
   },
-  // AI API 전용 (비용이 높은 엔드포인트)
+  // AI API 전용 (Gemini 유료 티어 기준)
   ai: {
-    requestsPerMinute: 5,
-    requestsPerHour: 30,
-    requestsPerDay: 100,
+    requestsPerMinute: 60,   // 5 → 60 (병렬 호출 허용)
+    requestsPerHour: 500,    // 30 → 500
+    requestsPerDay: 5000,    // 100 → 5000
   },
   // 로그인/회원가입 전용 (남용 방지)
   register: {

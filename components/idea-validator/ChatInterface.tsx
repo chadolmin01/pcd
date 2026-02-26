@@ -2,10 +2,20 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { ArrowRight, Check, AlertTriangle, Layers, Lock, Zap, Sword, HelpCircle } from 'lucide-react';
-import { ChatMessage, AnalysisMetrics, ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PerspectiveAdvice, Scorecard, CategoryUpdate, createEmptyScorecard, ScorecardCategory } from './types';
-import { analyzeIdea } from './geminiService';
+import { toast } from 'sonner';
+import { ChatMessage, AnalysisMetrics, ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PerspectiveAdvice, Scorecard, CategoryUpdate, createEmptyScorecard, ScorecardCategory, InteractionMode, StagedReflection, ScoreEvolution } from './types';
+import { buildReflectionSummaryForUser } from '@/lib/prompts/build-reflection-history';
+import { PERSONA_CATEGORY_MAP } from '@/lib/prompts/persona-config';
+import { analyzeIdea, analyzeIdeaParallel } from './geminiService';
 import { useTutorialSafe } from './tutorial';
 import { saveDecisionBatch, startNewSession, incrementRound, getCurrentSessionId } from './decisionAnalyzer';
+import {
+  initializeAnalyticsSession,
+  trackTurn,
+  trackReflection,
+  trackCompletionWithCategories,
+  cleanupAnalyticsSession,
+} from '@/lib/analytics';
 import DecisionProfileCard from './DecisionProfileCard';
 import ScorecardPanel from './ScorecardPanel';
 import ReflectionModal, { ReflectionModalState } from './ReflectionModal';
@@ -25,6 +35,7 @@ interface ChatInterfaceProps {
   ) => void;
   level: ValidationLevel;
   personas?: PersonaRole[];
+  interactionMode?: InteractionMode; // 개별 조언 vs 토론 모드
   // External input control (for using persistent input from parent)
   externalInput?: string;
   onExternalInputChange?: (value: string) => void;
@@ -34,7 +45,7 @@ interface ChatInterfaceProps {
 }
 
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, personas = DEFAULT_PERSONAS, externalInput, onExternalInputChange, hideInput = false, onRegisterSend, onBack }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, personas = DEFAULT_PERSONAS, interactionMode = 'individual', externalInput, onExternalInputChange, hideInput = false, onRegisterSend, onBack }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [internalInput, setInternalInput] = useState('');
 
@@ -43,6 +54,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   const setInput = onExternalInputChange || setInternalInput;
   const [isTyping, setIsTyping] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const latestMessageRef = useRef<HTMLDivElement>(null);
 
   // Metrics State
   const [metrics, setMetrics] = useState<AnalysisMetrics | null>(null);
@@ -70,17 +82,35 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   const [scorecard, setScorecard] = useState<Scorecard>(createEmptyScorecard());
   const [recentUpdates, setRecentUpdates] = useState<CategoryUpdate[]>([]);
 
+  // Reflection History 상태 (Staff-level architecture)
+  const [scoreEvolution, setScoreEvolution] = useState<ScoreEvolution[]>([]);
+  const [allStagedReflections, setAllStagedReflections] = useState<StagedReflection[]>([]);
+
   // 의사결정 프로필 갱신 트리거
   const [decisionRefreshTrigger, setDecisionRefreshTrigger] = useState(0);
 
   // 모달 열린 시간 추적 (응답 시간 측정용)
   const [modalOpenTime, setModalOpenTime] = useState<number | null>(null);
 
-  // 새 세션 시작
+  // Stabilize personas array for useEffect dependency (arrays compared by reference)
+  const personasKey = personas.join(',');
+
+  // 새 세션 시작 + Analytics 초기화
   useEffect(() => {
     startNewSession();
     setCurrentRound(0);
-  }, []);
+
+    // Analytics 세션 초기화 (also calls recoverAbandonedSession internally)
+    const sessionId = getCurrentSessionId();
+    const analyticsLevel = level === ValidationLevel.SKETCH ? 'sketch'
+      : level === ValidationLevel.DEFENSE ? 'defense' : 'mvp';
+    initializeAnalyticsSession(sessionId, analyticsLevel, personas, interactionMode);
+
+    // Cleanup on unmount
+    return () => {
+      cleanupAnalyticsSession();
+    };
+  }, [level, personasKey, interactionMode]);
 
   // Initial greeting
   useEffect(() => {
@@ -108,11 +138,39 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     }]);
   }, [level]);
 
+  // 스크롤 함수 - 최신 메시지가 화면 최상단에 위치하도록
+  const scrollToLatest = useCallback(() => {
+    setTimeout(() => {
+      if (latestMessageRef.current) {
+        latestMessageRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start'
+        });
+      }
+    }, 100);
+  }, []);
+
+  // 최신 메시지가 항상 보이도록 자동 스크롤
+  const lastMessage = messages[messages.length - 1];
+  const streamingContentLength = lastMessage ? (
+    (lastMessage.opinions?.length || 0) +
+    (lastMessage.closingRemarks?.length || 0) +
+    (lastMessage.waitingMessages?.length || 0) +
+    (lastMessage.discussion?.length || 0)
+  ) : 0;
+
+  // 메시지 변경 시 스크롤
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    scrollToLatest();
+  }, [messages.length, isTyping, scrollToLatest]);
+
+  // 스트리밍 콘텐츠 변경 시 스크롤
+  useEffect(() => {
+    if (streamingContentLength > 0) {
+      scrollToLatest();
     }
-  }, [messages, isTyping]);
+  }, [streamingContentLength, scrollToLatest]);
+
 
   // Core AI processing logic
   const processAIResponse = async (userInput: string, currentMessages: ChatMessage[]) => {
@@ -122,6 +180,9 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       const historyStrings = currentMessages.flatMap(m => {
         if (m.isUser) return [`User: ${m.text}`];
         // For AI responses, if it was reflected, mark it clearly so Gemini knows user committed to it.
+        if (m.discussion) {
+          return m.discussion.map(d => `${d.persona}: ${d.message}`);
+        }
         return m.responses?.map(r => {
              if (r.isReflected) {
                  return `[User ACCEPTED & DECIDED]: The user has decided to follow the advice from ${r.role}: "${r.reflectedText || r.content}"`;
@@ -130,9 +191,218 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         }) || [];
       });
 
-      // 현재 스코어카드와 턴 수를 AI에게 전달
-      const analysisResult = await analyzeIdea(userInput, historyStrings, level, personas, scorecard, turnCount + 1);
+      // 토론 모드 - 병렬 + 합성 스트리밍 API 사용 (방안 5)
+      if (interactionMode === 'discussion') {
+        const msgId = (Date.now() + 1).toString();
 
+        // 빈 메시지로 시작 (스트리밍 중 업데이트됨)
+        const aiMsg: ChatMessage = {
+          id: msgId,
+          isUser: false,
+          opinions: [], // 개별 의견
+          closingRemarks: [], // 결정 멘트
+          discussion: [], // 합성된 토론
+          responses: [],
+          timestamp: Date.now(),
+          isStreaming: true,
+          streamPhase: 'opinions',
+        };
+        setMessages(prev => [...prev, aiMsg]);
+
+        await analyzeIdeaParallel(
+          userInput,
+          historyStrings,
+          level,
+          personas,
+          scorecard,
+          turnCount + 1,
+          {
+            // 개별 의견 도착
+            onOpinion: (data) => {
+              setMessages(prev => prev.map(m => {
+                if (m.id === msgId) {
+                  return {
+                    ...m,
+                    opinions: [...(m.opinions || []), data],
+                    streamPhase: 'opinions',
+                  };
+                }
+                return m;
+              }));
+              scrollToLatest();
+            },
+            // 결정 멘트 도착
+            onClosing: (data) => {
+              setMessages(prev => prev.map(m => {
+                if (m.id === msgId) {
+                  return {
+                    ...m,
+                    closingRemarks: [...(m.closingRemarks || []), data],
+                    streamPhase: 'closing',
+                  };
+                }
+                return m;
+              }));
+              scrollToLatest();
+            },
+            // 대기 중 대화 도착
+            onWaiting: (data) => {
+              setMessages(prev => prev.map(m => {
+                if (m.id === msgId) {
+                  return {
+                    ...m,
+                    waitingMessages: [...(m.waitingMessages || []), data],
+                    streamPhase: 'waiting',
+                  };
+                }
+                return m;
+              }));
+              scrollToLatest();
+            },
+            // 토론 턴 도착
+            onDiscussionTurn: (turn) => {
+              setMessages(prev => prev.map(m => {
+                if (m.id === msgId) {
+                  return {
+                    ...m,
+                    discussion: [...(m.discussion || []), turn],
+                    streamPhase: 'discussion',
+                  };
+                }
+                return m;
+              }));
+              scrollToLatest();
+            },
+            // 최종 응답 도착
+            onFinalResponse: (result) => {
+              // Capture previous scorecard BEFORE updating for analytics
+              const prevScorecardSnapshot = { ...scorecard };
+
+              if (result.metrics) {
+                setMetrics(result.metrics);
+                setShowInputMode(false);
+              }
+
+              if (result.scorecard) {
+                setScorecard(prev => {
+                  const newScorecard = { ...result.scorecard! };
+                  const categories: ScorecardCategory[] = [
+                    'problemDefinition', 'solution', 'marketAnalysis', 'revenueModel',
+                    'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection'
+                  ];
+
+                  let recalculatedTotal = 0;
+                  for (const cat of categories) {
+                    if (prev[cat].current > newScorecard[cat].current) {
+                      newScorecard[cat].current = prev[cat].current;
+                    }
+                    if (prev[cat].filled) {
+                      newScorecard[cat].filled = true;
+                    }
+                    recalculatedTotal += newScorecard[cat].current;
+                  }
+                  newScorecard.totalScore = recalculatedTotal;
+                  return newScorecard;
+                });
+              }
+
+              if (result.categoryUpdates && result.categoryUpdates.length > 0) {
+                setRecentUpdates(result.categoryUpdates);
+
+                // Staff-level: Score Evolution 추적
+                setScoreEvolution(prev => {
+                  const newEvolutions: ScoreEvolution[] = result.categoryUpdates!.map(update => ({
+                    category: update.category as ScorecardCategory,
+                    turn: turnCount + 1,
+                    from: scorecard[update.category as ScorecardCategory]?.current || 0,
+                    to: (scorecard[update.category as ScorecardCategory]?.current || 0) + update.delta,
+                    delta: update.delta,
+                    reason: update.reason,
+                  }));
+                  return [...prev, ...newEvolutions];
+                });
+              }
+
+              setMessages(prev => prev.map(m => {
+                if (m.id === msgId) {
+                  return {
+                    ...m,
+                    responses: result.responses?.map(r => ({ ...r, isReflected: false })),
+                    isStreaming: false,
+                    streamPhase: 'final',
+                  };
+                }
+                return m;
+              }));
+
+              setIsTyping(false);
+              setTurnCount(prev => prev + 1);
+              const newRound = incrementRound();
+              setCurrentRound(newRound);
+
+              // Analytics: 턴 추적 (use captured snapshot for prev scorecard)
+              try {
+                const adviceCount = result.responses?.length || 0;
+                const personaMap: Record<string, { shown: number; reflected: number }> = {};
+                result.responses?.forEach(r => {
+                  personaMap[r.role] = { shown: 1, reflected: 0 };
+                });
+                trackTurn(turnCount + 1, result.scorecard || scorecard, prevScorecardSnapshot, adviceCount, personaMap);
+              } catch (e) {
+                console.error('[Analytics] trackTurn failed:', e);
+              }
+            },
+            onError: (error) => {
+              console.error('Parallel streaming error:', error);
+              setIsTyping(false);
+              setMessages(prev => prev.map(m => {
+                if (m.id === msgId) {
+                  return {
+                    ...m,
+                    isStreaming: false,
+                    responses: [{
+                      role: 'System',
+                      name: '시스템',
+                      avatar: '',
+                      content: '연결이 불안정합니다. 다시 시도해주세요.',
+                      tone: 'Neutral',
+                      suggestedActions: []
+                    }]
+                  };
+                }
+                return m;
+              }));
+            },
+            // 입력 관련성 경고
+            onWarning: (warningMessage) => {
+              toast.warning('입력 확인 필요', {
+                description: warningMessage,
+                duration: 5000,
+              });
+              setIsTyping(false);
+              // 경고 시 메시지 제거 (빈 응답 방지)
+              setMessages(prev => prev.filter(m => m.id !== msgId));
+            }
+          },
+          // Staff-level reflection history (Phase 2)
+          allStagedReflections,
+          scoreEvolution
+        );
+        return;
+      }
+
+      // 개별 조언 모드 (기존 비스트리밍 API)
+      const analysisResult = await analyzeIdea(userInput, historyStrings, level, personas, scorecard, turnCount + 1, interactionMode);
+
+      // 경고 메시지 처리
+      if (analysisResult.warning) {
+        toast.warning('입력 확인 필요', {
+          description: analysisResult.warning,
+          duration: 5000,
+        });
+      }
+
+      // 개별 조언 모드 (기존 로직)
       // Safety check for responses
       if (!analysisResult.responses || !Array.isArray(analysisResult.responses)) {
         console.error('Invalid response format:', analysisResult);
@@ -198,6 +468,19 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       const newRound = incrementRound();
       setCurrentRound(newRound);
 
+      // Analytics: 턴 추적 (scorecard was already captured before setScorecard)
+      try {
+        const prevScorecardForTracking = scorecard; // Current scorecard before update
+        const adviceCount = analysisResult.responses.length;
+        const personaMap: Record<string, { shown: number; reflected: number }> = {};
+        analysisResult.responses.forEach(r => {
+          personaMap[r.role] = { shown: 1, reflected: 0 };
+        });
+        trackTurn(turnCount + 1, analysisResult.scorecard || scorecard, prevScorecardForTracking, adviceCount, personaMap);
+      } catch (e) {
+        console.error('[Analytics] trackTurn failed:', e);
+      }
+
       // Show card tutorial after first AI response with persona cards
       if (!hasShownCardTutorial && tutorial?.shouldShowTutorial('chat-interface')) {
         setHasShownCardTutorial(true);
@@ -208,7 +491,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     } catch (e) {
       console.error(e);
     } finally {
-      setIsTyping(false);
+      // 토론 모드가 아닐 때만 여기서 isTyping false
+      if (interactionMode !== 'discussion') {
+        setIsTyping(false);
+      }
     }
   };
 
@@ -317,7 +603,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     });
     setMessages(updatedMessages);
 
-    // 의사결정 데이터 저장 (새로운 구조)
+    // Analytics: 반영 추적 (always track, regardless of perspectives)
+    try {
+      trackReflection(reflectionModal.role);
+    } catch (e) {
+      console.error('[Analytics] trackReflection failed:', e);
+    }
+
+    // 의사결정 데이터 저장 (only when perspectives exist)
     if (reflectionModal.perspectives && selectedPerspective) {
       const sessionId = getCurrentSessionId();
       const options = reflectionModal.perspectives.map(p => p.perspectiveLabel);
@@ -361,11 +654,47 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   const handleConsolidatedSend = async () => {
       const lastAiMsg = messages[messages.length - 1];
       if (!lastAiMsg || !lastAiMsg.responses) return;
-      const stagedReflections = lastAiMsg.responses.filter(r => r.isReflected);
-      if (stagedReflections.length === 0) return;
+      const currentReflections = lastAiMsg.responses.filter(r => r.isReflected);
+      if (currentReflections.length === 0) return;
 
-      const reflectionSummary = stagedReflections.map(r => `• ${r.role} 결정: ${r.reflectedText}`).join('\n');
-      const consolidatedText = `[종합 결정 사항]\n${reflectionSummary}\n\n위 결정들을 바탕으로 아이디어를 발전시키고 다음 단계를 진행해주세요.`;
+      // 최저점수 카테고리 찾기 (70% 미만, 최대 3개)
+      const categoryScores = (Object.keys(scorecard) as ScorecardCategory[])
+        .filter(cat => cat !== 'totalScore' as unknown)
+        .map(cat => ({
+          key: cat,
+          ratio: scorecard[cat].current / scorecard[cat].max,
+        }));
+      const lowestCategories = [...categoryScores]
+        .sort((a, b) => a.ratio - b.ratio)
+        .slice(0, 3)
+        .filter(c => c.ratio < 0.7)
+        .map(c => c.key);
+
+      // StagedReflection 타입으로 변환 (Staff-level architecture)
+      const newStagedReflections: StagedReflection[] = currentReflections.map(r => {
+        // 페르소나 → 담당 카테고리 자동 매핑
+        const categoryMap = PERSONA_CATEGORY_MAP[r.role];
+        const linkedCategories = categoryMap?.primary as ScorecardCategory[] || [];
+
+        // 최저점수 카테고리와 연결된 결정 → impact="high"
+        const hasLowestCategory = linkedCategories.some(cat => lowestCategories.includes(cat));
+        const impactScore = hasLowestCategory ? 'high' : 'medium';
+
+        return {
+          role: r.role,
+          reflectedText: r.reflectedText || r.content,
+          turn: turnCount + 1,
+          impactScore: impactScore as 'low' | 'medium' | 'high',
+          linkedCategories,
+        };
+      });
+
+      // 전체 반영 이력에 추가
+      const updatedAllReflections = [...allStagedReflections, ...newStagedReflections];
+      setAllStagedReflections(updatedAllReflections);
+
+      // 구조화된 사용자 메시지 생성
+      const consolidatedText = buildReflectionSummaryForUser(newStagedReflections);
 
       const userMsg: ChatMessage = {
           id: Date.now().toString(),
@@ -389,6 +718,16 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     const firstIdea = messages.find(m => m.isUser)?.text || "Startup Project";
     // Progressive Scorecard의 totalScore 사용 (기존 metrics.score 대신)
     const finalScore = scorecard.totalScore > 0 ? scorecard.totalScore : metrics?.score;
+
+    // Analytics: 완료 추적 (카테고리 추출 포함)
+    // Fire and forget - don't block completion on analytics
+    if (finalScore !== undefined) {
+      const summary = reflectedAdvice.slice(0, 3).join(' | ');
+      trackCompletionWithCategories(finalScore, firstIdea, summary).catch((e) => {
+        console.error('[Analytics] trackCompletion failed:', e);
+      });
+    }
+
     // messages, scorecard, ideaCategory 추가 전달 (종합 결과물 생성용)
     onComplete(fullConv, firstIdea, reflectedAdvice, finalScore, messages, scorecard, ideaCategory);
   };
@@ -496,8 +835,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
             lastMsgId={lastMsg?.id}
             isTyping={isTyping}
             hideInput={hideInput}
+            selectedPersonas={personas}
+            interactionMode={interactionMode}
             onOpenReflectionModal={openReflectionModal}
             onConsolidatedSend={handleConsolidatedSend}
+            latestMessageRef={latestMessageRef}
           />
         </div>
 
