@@ -57,7 +57,8 @@
       "Bash(__NEW_LINE_049b5242cb9406d4__ echo \"=== Test 1: Initialize session ===\")",
       "Bash(__NEW_LINE_049b5242cb9406d4__ echo \"\")",
       "Bash(__NEW_LINE_f7b958e2bc148b4c__ echo \"\")",
-      "Bash(__NEW_LINE_16cd693010caf303__ echo \"\")"
+      "Bash(__NEW_LINE_16cd693010caf303__ echo \"\")",
+      "Bash(grep:*)"
     ]
   }
 }

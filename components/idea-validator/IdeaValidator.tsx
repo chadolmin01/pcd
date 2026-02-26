@@ -9,6 +9,7 @@ import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingDat
 import { validationResultsStore } from '@/lib/validationResultsStore';
 import { toast } from 'sonner';
 import { useUsage } from '@/src/hooks/useUsage';
+import { WorkflowContainer } from './workflow';
 
 interface IdeaValidatorProps {
   onClose?: () => void;
@@ -44,6 +45,12 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
     setUserData(data);
     setView(AppState.SELECTION);
     toast.success(`${data.name}님, 환영합니다!`);
+  };
+
+  // 지원사업 워크플로우 시작
+  const handleWorkflowStart = () => {
+    setView(AppState.WORKFLOW);
+    toast.success('지원사업 준비 워크플로우를 시작합니다!');
   };
 
   const handleSelection = (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[], selectedInteractionMode?: InteractionMode) => {
@@ -133,8 +140,24 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
               toast.info('로그아웃 되었습니다');
             }}
             userEmail={userData?.email}
+            onWorkflowStart={handleWorkflowStart}
           />
         );
+      case AppState.WORKFLOW:
+        return userData ? (
+          <WorkflowContainer
+            userData={{
+              name: userData.name,
+              email: userData.email,
+              organization: userData.organization,
+            }}
+            onBack={() => setView(AppState.SELECTION)}
+            onComplete={() => {
+              toast.success('워크플로우가 완료되었습니다!');
+              setView(AppState.SELECTION);
+            }}
+          />
+        ) : null;
       case AppState.CHAT:
         return (
           <div className="h-full w-full animate-in fade-in duration-500">

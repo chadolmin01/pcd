@@ -269,6 +269,7 @@ export enum AppState {
   SELECTION = 'SELECTION',
   CHAT = 'CHAT',
   RESULT = 'RESULT',
+  WORKFLOW = 'WORKFLOW', // 지원사업 준비 워크플로우 모드
 }
 
 export interface OnboardingData {

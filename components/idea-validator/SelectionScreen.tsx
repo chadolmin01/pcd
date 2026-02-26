@@ -374,11 +374,12 @@ interface SelectionScreenProps {
   skipToLevelSelect?: boolean;
   onBack?: () => void;
   userEmail?: string;
+  onWorkflowStart?: () => void; // 지원사업 준비 워크플로우 시작
 }
 
 type SelectionStep = 'mode' | 'personas' | 'level';
 
-const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevelSelect = false, onBack, userEmail }) => {
+const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevelSelect = false, onBack, userEmail, onWorkflowStart }) => {
   const [step, setStep] = useState<SelectionStep>(skipToLevelSelect ? 'personas' : 'mode');
   const [selectedPersonas, setSelectedPersonas] = useState<PersonaRole[]>([]);
   const [modalPersona, setModalPersona] = useState<PersonaPreset | null>(null);
@@ -451,6 +452,37 @@ const SelectionScreen: React.FC<SelectionScreenProps> = ({ onSelect, skipToLevel
           {/* Step 2: Persona Selection */}
           {step === 'personas' && (
             <div className="flex flex-col items-center justify-center opacity-0 animate-[fadeInUp_0.6s_ease-out_0.2s_forwards]">
+              {/* 지원사업 준비 워크플로우 배너 */}
+              {onWorkflowStart && (
+                <div className="w-full max-w-6xl mb-8">
+                  <button
+                    onClick={onWorkflowStart}
+                    className="w-full p-4 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl text-white shadow-lg hover:shadow-xl transition-all hover:scale-[1.01] group"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+                          <Sparkles size={24} />
+                        </div>
+                        <div className="text-left">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-lg font-bold">지원사업 준비 워크플로우</span>
+                            <span className="px-2 py-0.5 bg-yellow-400 text-yellow-900 text-[10px] font-bold rounded-full">NEW</span>
+                          </div>
+                          <p className="text-sm text-white/80">
+                            아이디어 검증 → PRD → 사업계획서까지 한번에!
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 text-white/80 group-hover:text-white transition-colors">
+                        <span className="text-sm font-medium hidden sm:block">시작하기</span>
+                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                      </div>
+                    </div>
+                  </button>
+                </div>
+              )}
+
               <div className="text-center mb-6">
                 <button
                   onClick={() => onBack ? onBack() : setStep('mode')}

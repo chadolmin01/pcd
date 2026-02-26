@@ -25,6 +25,9 @@ interface ResultViewProps {
   rawMessages?: ChatMessage[];
   scorecard?: Scorecard;
   ideaCategory?: string;
+  // Workflow mode support
+  workflowMode?: 'prd' | 'business-plan' | 'export';
+  selectedProgram?: 'pre-startup' | 'early-startup' | 'custom' | null;
 }
 
 const ResultView: React.FC<ResultViewProps> = ({
@@ -34,15 +37,27 @@ const ResultView: React.FC<ResultViewProps> = ({
   onComplete,
   rawMessages = [],
   scorecard,
-  ideaCategory
+  ideaCategory,
+  workflowMode,
+  selectedProgram,
 }) => {
   const [artifacts, setArtifacts] = useState<Artifacts | null>(null);
   const [businessPlan, setBusinessPlan] = useState<BusinessPlanData | null>(null);
   const [loading, setLoading] = useState(true);
   const [synthesizing, setSynthesizing] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'prd' | 'jd' | 'businessPlan'>('overview');
+  // Set initial tab based on workflow mode
+  const getInitialTab = () => {
+    if (workflowMode === 'prd') return 'prd';
+    if (workflowMode === 'business-plan') return 'businessPlan';
+    if (workflowMode === 'export') return 'overview';
+    return 'overview';
+  };
+  const [activeTab, setActiveTab] = useState<'overview' | 'prd' | 'jd' | 'businessPlan'>(getInitialTab());
   const [copied, setCopied] = useState(false);
   const [pdfLoading, setPdfLoading] = useState(false);
+
+  // Track if we should auto-synthesize
+  const shouldAutoSynthesize = workflowMode === 'business-plan' && !businessPlan && !synthesizing;
 
   useEffect(() => {
     const fetchArtifacts = async () => {
@@ -86,6 +101,13 @@ const ResultView: React.FC<ResultViewProps> = ({
       setSynthesizing(false);
     }
   }, [originalIdea, rawMessages, reflectedAdvice, scorecard, ideaCategory, synthesizing, businessPlan]);
+
+  // Auto-synthesize business plan in workflow mode
+  useEffect(() => {
+    if (shouldAutoSynthesize && !loading) {
+      handleSynthesizeBusinessPlan();
+    }
+  }, [shouldAutoSynthesize, loading, handleSynthesizeBusinessPlan]);
 
   const handleDownloadJSON = useCallback(() => {
     if (!businessPlan) return;
