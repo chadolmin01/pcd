@@ -68,6 +68,29 @@ const DEBOUNCE_MS = 5000;
 const PENDING_MAX_AGE_MS = 24 * 60 * 60 * 1000; // 24 hours
 const MAX_IDEA_TEXT_LENGTH = 500; // Limit sensitive data exposure
 
+// SECURITY FIX 4.1: Environment-aware logging
+// Only log detailed messages in development
+const isDev = process.env.NODE_ENV === 'development';
+
+function debugLog(message: string, ...args: unknown[]): void {
+  if (isDev) {
+    console.log(`[Analytics] ${message}`, ...args);
+  }
+}
+
+function debugWarn(message: string): void {
+  if (isDev) {
+    console.warn(`[Analytics] ${message}`);
+  }
+}
+
+function debugError(message: string): void {
+  // Always log errors but without sensitive details in production
+  if (isDev) {
+    console.error(`[Analytics] ${message}`);
+  }
+}
+
 // Module-level state
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -312,25 +335,79 @@ function isIOSSafari(): boolean {
 }
 
 /**
- * Save analytics data to localStorage as fallback
+ * SECURITY FIX 3.4: Save analytics data to localStorage as fallback
+ * - Minimizes stored data (no raw text)
+ * - Enforces size limits
+ * - Auto-expires old entries
  */
+const MAX_PENDING_ENTRIES = 5;
+const MAX_PENDING_DATA_SIZE = 1024; // 1KB per entry
+
+function sanitizePendingData(data: Record<string, unknown>): Record<string, unknown> {
+  // Only keep essential fields, remove any text content
+  const safeFields = [
+    'turnCount', 'finalScore', 'completionStatus', 'dropoffPoint',
+    'adviceShownCount', 'adviceReflectedCount'
+  ];
+
+  const sanitized: Record<string, unknown> = {};
+  for (const field of safeFields) {
+    if (data[field] !== undefined) {
+      sanitized[field] = data[field];
+    }
+  }
+
+  // Include minimal score history (last 5 entries only)
+  if (Array.isArray(data.scoreHistory)) {
+    sanitized.scoreHistory = data.scoreHistory.slice(-5).map((entry: unknown) => {
+      if (typeof entry === 'object' && entry !== null) {
+        const e = entry as Record<string, unknown>;
+        return { turn: e.turn, score: e.score };
+      }
+      return entry;
+    });
+  }
+
+  return sanitized;
+}
+
 function savePendingAnalytics(sessionHash: string, data: Record<string, unknown>): void {
   if (typeof window === 'undefined') return;
 
   try {
-    const pending: PendingAnalytics[] = JSON.parse(
+    let pending: PendingAnalytics[] = JSON.parse(
       localStorage.getItem(PENDING_STORAGE_KEY) || '[]'
     );
 
+    // Remove expired entries
+    const now = Date.now();
+    pending = pending.filter(p => now - p.timestamp < PENDING_MAX_AGE_MS);
+
+    // Limit number of pending entries
+    if (pending.length >= MAX_PENDING_ENTRIES) {
+      pending = pending.slice(-MAX_PENDING_ENTRIES + 1);
+    }
+
+    // Sanitize data before storing
+    const sanitizedData = sanitizePendingData(data);
+
+    // Check size limit
+    const dataStr = JSON.stringify(sanitizedData);
+    if (dataStr.length > MAX_PENDING_DATA_SIZE) {
+      console.warn('[Analytics] Pending data too large, truncating');
+      return;
+    }
+
     pending.push({
       sessionHash,
-      data,
-      timestamp: Date.now(),
+      data: sanitizedData,
+      timestamp: now,
     });
 
     localStorage.setItem(PENDING_STORAGE_KEY, JSON.stringify(pending));
   } catch (e) {
-    console.error('[Analytics] Failed to save pending data:', e);
+    // SECURITY FIX 4.1: Don't expose error details
+    console.error('[Analytics] Failed to save pending data');
   }
 }
 

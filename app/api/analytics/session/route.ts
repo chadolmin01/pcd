@@ -70,11 +70,144 @@ function isValidSessionHash(hash: string): boolean {
   return typeof hash === 'string' && /^[a-f0-9]{64}$/.test(hash);
 }
 
+// ================================================
+// SECURITY FIX 3.2: JSONB Injection Prevention
+// Strict schema validation for all JSONB fields
+// ================================================
+
+const MAX_PERSONA_ENGAGEMENT_ENTRIES = 20;
+const MAX_SCORE_HISTORY_ENTRIES = 100;
+const MAX_STRING_LENGTH = 100;
+
+interface PersonaEngagementEntry {
+  adviceShown: number;
+  adviceReflected: number;
+}
+
+interface ScoreHistoryEntry {
+  turn: number;
+  score: number;
+  delta?: number;
+  timestamp?: number;
+}
+
+/**
+ * Validate personaEngagement schema strictly
+ * Expected: { [persona: string]: { adviceShown: number, adviceReflected: number } }
+ */
+function isValidPersonaEngagement(data: unknown): data is Record<string, PersonaEngagementEntry> {
+  if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+    return false;
+  }
+
+  const entries = Object.entries(data as Record<string, unknown>);
+
+  // Limit number of entries to prevent storage exhaustion
+  if (entries.length > MAX_PERSONA_ENGAGEMENT_ENTRIES) {
+    return false;
+  }
+
+  for (const [key, value] of entries) {
+    // Validate key (persona name)
+    if (typeof key !== 'string' || key.length === 0 || key.length > MAX_STRING_LENGTH) {
+      return false;
+    }
+    // Only allow alphanumeric and common characters
+    if (!/^[a-zA-Z0-9_\-\s]+$/.test(key)) {
+      return false;
+    }
+
+    // Validate value structure
+    if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+      return false;
+    }
+
+    const entry = value as Record<string, unknown>;
+
+    // Must have exactly these fields with correct types
+    if (typeof entry.adviceShown !== 'number' || typeof entry.adviceReflected !== 'number') {
+      return false;
+    }
+
+    // Values must be non-negative integers
+    if (!Number.isInteger(entry.adviceShown) || entry.adviceShown < 0 || entry.adviceShown > 10000) {
+      return false;
+    }
+    if (!Number.isInteger(entry.adviceReflected) || entry.adviceReflected < 0 || entry.adviceReflected > 10000) {
+      return false;
+    }
+
+    // No extra fields allowed
+    const allowedKeys = ['adviceShown', 'adviceReflected'];
+    if (Object.keys(entry).some(k => !allowedKeys.includes(k))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+/**
+ * Validate scoreHistory schema strictly
+ * Expected: [{ turn: number, score: number, delta?: number, timestamp?: number }]
+ */
+function isValidScoreHistory(data: unknown): data is ScoreHistoryEntry[] {
+  if (!Array.isArray(data)) {
+    return false;
+  }
+
+  // Limit array size to prevent storage exhaustion
+  if (data.length > MAX_SCORE_HISTORY_ENTRIES) {
+    return false;
+  }
+
+  for (const entry of data) {
+    if (typeof entry !== 'object' || entry === null || Array.isArray(entry)) {
+      return false;
+    }
+
+    const item = entry as Record<string, unknown>;
+
+    // Required fields
+    if (typeof item.turn !== 'number' || !Number.isInteger(item.turn) || item.turn < 0 || item.turn > 1000) {
+      return false;
+    }
+    if (typeof item.score !== 'number' || item.score < 0 || item.score > 100) {
+      return false;
+    }
+
+    // Optional fields
+    if (item.delta !== undefined) {
+      if (typeof item.delta !== 'number' || item.delta < -100 || item.delta > 100) {
+        return false;
+      }
+    }
+    if (item.timestamp !== undefined) {
+      if (typeof item.timestamp !== 'number' || item.timestamp < 0) {
+        return false;
+      }
+    }
+
+    // No extra fields allowed
+    const allowedKeys = ['turn', 'score', 'delta', 'timestamp'];
+    if (Object.keys(item).some(k => !allowedKeys.includes(k))) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
 /**
  * Validate sessionId format
+ * SECURITY FIX 4.3: Restrict to safe characters only
  */
 function isValidSessionId(sessionId: unknown): sessionId is string {
-  return typeof sessionId === 'string' && sessionId.length > 0 && sessionId.length <= 100;
+  if (typeof sessionId !== 'string') return false;
+  if (sessionId.length === 0 || sessionId.length > 100) return false;
+  // Only allow alphanumeric, hyphens, and underscores (UUID-safe)
+  if (!/^[a-zA-Z0-9_-]+$/.test(sessionId)) return false;
+  return true;
 }
 
 /**
@@ -311,10 +444,10 @@ async function handleUpdate(
     updateData.turn_count = body.turnCount;
   }
 
-  // Validate and add scoreHistory
+  // SECURITY FIX 3.2: Validate scoreHistory with strict schema
   if (body.scoreHistory !== undefined) {
-    if (!Array.isArray(body.scoreHistory)) {
-      return NextResponse.json({ error: 'Invalid scoreHistory' }, { status: 400 });
+    if (!isValidScoreHistory(body.scoreHistory)) {
+      return NextResponse.json({ error: 'Invalid scoreHistory format or size' }, { status: 400 });
     }
     updateData.score_history = body.scoreHistory;
   }
@@ -335,17 +468,19 @@ async function handleUpdate(
     updateData.advice_reflected_count = body.adviceReflectedCount;
   }
 
-  // Add personaEngagement (object type, minimal validation)
+  // SECURITY FIX 3.2: Validate personaEngagement with strict schema
   if (body.personaEngagement !== undefined) {
-    if (typeof body.personaEngagement !== 'object' || body.personaEngagement === null) {
-      return NextResponse.json({ error: 'Invalid personaEngagement' }, { status: 400 });
+    if (!isValidPersonaEngagement(body.personaEngagement)) {
+      return NextResponse.json({ error: 'Invalid personaEngagement format or size' }, { status: 400 });
     }
     updateData.persona_engagement = body.personaEngagement;
   }
 
-  // Add dropoffPoint
+  // SECURITY FIX 4.2: Validate dropoffPoint with length and format
   if (body.dropoffPoint !== undefined) {
-    if (typeof body.dropoffPoint !== 'string') {
+    if (typeof body.dropoffPoint !== 'string' ||
+        body.dropoffPoint.length > 50 ||
+        !/^[a-zA-Z0-9_-]+$/.test(body.dropoffPoint)) {
       return NextResponse.json({ error: 'Invalid dropoffPoint' }, { status: 400 });
     }
     updateData.dropoff_point = body.dropoffPoint;

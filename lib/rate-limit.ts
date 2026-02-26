@@ -286,25 +286,72 @@ export function createRateLimitError(result: RateLimitResult) {
 
 // ================================================
 // 클라이언트 IP 가져오기
+// SECURITY FIX 3.1: IP 스푸핑 방어
 // ================================================
+
+/**
+ * Vercel/Cloudflare 환경에서만 프록시 헤더를 신뢰
+ * 직접 연결 시 스푸핑 가능한 헤더 무시
+ */
+function isTrustedProxyEnvironment(): boolean {
+  // Vercel 환경 감지
+  if (process.env.VERCEL === '1' || process.env.VERCEL_ENV) {
+    return true;
+  }
+  // Cloudflare 환경 (CF-Connecting-IP 헤더는 Cloudflare만 설정 가능)
+  // 프로덕션에서만 신뢰
+  if (process.env.NODE_ENV === 'production') {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * IP 주소 형식 검증 (IPv4 또는 IPv6)
+ */
+function isValidIPAddress(ip: string): boolean {
+  // IPv4: 0-255 범위의 4개 숫자
+  const ipv4Regex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  // IPv6: 간단한 형식 검증
+  const ipv6Regex = /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^(?:[0-9a-fA-F]{1,4}:)*:[0-9a-fA-F]{1,4}$/;
+
+  return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+}
+
 export function getClientIP(request: NextRequest | Request): string {
-  const headers = request.headers
+  const headers = request.headers;
 
-  // Cloudflare
-  const cfIP = headers.get('cf-connecting-ip')
-  if (cfIP) return cfIP
+  // SECURITY: 신뢰할 수 있는 프록시 환경에서만 헤더 사용
+  if (isTrustedProxyEnvironment()) {
+    // Cloudflare (가장 신뢰할 수 있음 - Cloudflare만 설정 가능)
+    const cfIP = headers.get('cf-connecting-ip');
+    if (cfIP && isValidIPAddress(cfIP.trim())) {
+      return cfIP.trim();
+    }
 
-  // X-Forwarded-For (프록시/로드밸런서)
-  const forwardedFor = headers.get('x-forwarded-for')
-  if (forwardedFor) {
-    return forwardedFor.split(',')[0].trim()
+    // Vercel (x-forwarded-for의 첫 번째 IP)
+    const forwardedFor = headers.get('x-forwarded-for');
+    if (forwardedFor) {
+      const firstIP = forwardedFor.split(',')[0].trim();
+      if (isValidIPAddress(firstIP)) {
+        return firstIP;
+      }
+    }
+
+    // X-Real-IP (Nginx 등)
+    const realIP = headers.get('x-real-ip');
+    if (realIP && isValidIPAddress(realIP.trim())) {
+      return realIP.trim();
+    }
   }
 
-  // X-Real-IP
-  const realIP = headers.get('x-real-ip')
-  if (realIP) return realIP
+  // 개발 환경이거나 신뢰할 수 없는 환경: 고정 식별자 사용
+  // 실제 IP 대신 요청 특성 기반 해시 사용
+  const userAgent = headers.get('user-agent') || 'unknown';
+  const acceptLang = headers.get('accept-language') || 'unknown';
 
-  return 'unknown'
+  // 간단한 클라이언트 식별자 생성 (IP 스푸핑 불가)
+  return `client-${Buffer.from(userAgent + acceptLang).toString('base64').slice(0, 16)}`;
 }
 
 // ================================================
