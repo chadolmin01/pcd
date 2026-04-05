@@ -35,6 +35,7 @@ export const ScorecardSchema = z.object({
   logicalConsistency: CategoryScoreSchema,
   feasibility: CategoryScoreSchema,
   feedbackReflection: CategoryScoreSchema,
+  teamComposition: CategoryScoreSchema.optional(),
   totalScore: z.number().min(0).max(100),
 }).nullable();
 
@@ -45,7 +46,8 @@ export type InteractionMode = z.infer<typeof InteractionModeSchema>;
 // Staff-level Reflection History 스키마
 const ScorecardCategorySchema = z.enum([
   'problemDefinition', 'solution', 'marketAnalysis', 'revenueModel',
-  'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection'
+  'differentiation', 'logicalConsistency', 'feasibility', 'feedbackReflection',
+  'teamComposition'
 ]);
 
 export const StagedReflectionSchema = z.object({
@@ -66,6 +68,17 @@ export const ScoreEvolutionSchema = z.object({
 });
 
 // 아이디어 검증 API 요청 스키마
+// 정부지원사업 평가항목 질문 스키마
+export const ProgramQuestionSchema = z.object({
+  id: z.string(),
+  question: z.string(),
+  purpose: z.string(),
+  evaluationCriteria: z.array(z.string()),
+  followUpHints: z.array(z.string()),
+  sectionId: z.string(),
+  sectionTitle: z.string(),
+});
+
 export const AnalyzeRequestSchema = z.object({
   idea: z.string()
     .min(1, '아이디어를 입력해주세요')
@@ -79,6 +92,9 @@ export const AnalyzeRequestSchema = z.object({
   // Staff-level Reflection History (Phase 2)
   stagedReflections: z.array(StagedReflectionSchema).default([]),
   scoreEvolution: z.array(ScoreEvolutionSchema).default([]),
+  // 정부지원사업 평가항목 기반 질문
+  programQuestions: z.array(ProgramQuestionSchema).default([]),
+  programName: z.string().optional(),
 });
 
 export type AnalyzeRequest = z.infer<typeof AnalyzeRequestSchema>;

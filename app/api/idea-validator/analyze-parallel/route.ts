@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { withRateLimit } from '@/lib/rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { streamObject } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
@@ -17,11 +18,14 @@ import {
 } from '@/lib/validations';
 import { DiscussionResponseSchema, DiscussionTurn } from '@/lib/schemas/ai-sdk-schemas';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error('GEMINI_API_KEY environment variable is required');
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // Vercel AI SDK용 Google provider
 const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY || '',
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 // Exponential backoff with jitter for 429 errors
@@ -43,7 +47,7 @@ async function callWithBackoff<T>(
 }
 
 // 병렬 + 스트리밍 합성 API (Vercel AI SDK)
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(async (request: NextRequest) => {
   try {
     const body = await request.json();
     const validation = validateRequest(body, AnalyzeRequestSchema);
@@ -62,6 +66,9 @@ export async function POST(request: NextRequest) {
       // Staff-level Reflection History (Phase 2)
       stagedReflections,
       scoreEvolution,
+      // 정부지원사업 평가항목
+      programQuestions,
+      programName,
     } = validation.data;
 
     const encoder = new TextEncoder();
@@ -136,7 +143,8 @@ export async function POST(request: NextRequest) {
           });
 
           const combinedPrompt = buildCombinedOpinionPrompt(
-            idea, historyContext, personas, currentScorecard, level
+            idea, historyContext, personas, currentScorecard, level,
+            programQuestions || [], programName
           );
 
           let opinions: { persona: string; opinion: string }[] = [];
@@ -237,7 +245,9 @@ export async function POST(request: NextRequest) {
             personas,
             currentScorecard,
             turnNumber,
-            level
+            level,
+            programQuestions || [],
+            programName
           );
 
           // Staff-level: Reflection History + Multi-Agent Insights 추가
@@ -425,4 +435,4 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-}
+}, { isAI: true });

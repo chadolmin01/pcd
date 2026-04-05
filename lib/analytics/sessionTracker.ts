@@ -200,12 +200,7 @@ function atomicUpdateWithRetry(
       return true;
     }
 
-    // Brief delay before retry (exponential backoff)
-    const delay = Math.pow(2, i) * 10;
-    const start = Date.now();
-    while (Date.now() - start < delay) {
-      // Busy wait (synchronous delay for atomic operation)
-    }
+    // sessionStorage is synchronous and single-threaded, retry immediately
   }
 
   console.error('[Analytics] Failed to update state after retries');

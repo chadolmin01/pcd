@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { withRateLimit } from '@/lib/rate-limit';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import {
   getAnalyzeSystemInstruction,
@@ -17,10 +18,13 @@ import {
   ParsedWithScorecard,
 } from '@/lib/validations';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error('GEMINI_API_KEY environment variable is required');
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 스트리밍 API 라우트 - 토론 모드 전용
-export async function POST(request: NextRequest) {
+export const POST = withRateLimit(async (request: NextRequest) => {
   try {
     // Zod 스키마로 요청 검증
     const body = await request.json();
@@ -203,4 +207,4 @@ export async function POST(request: NextRequest) {
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
-}
+}, { isAI: true });

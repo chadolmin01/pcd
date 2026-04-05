@@ -20,7 +20,10 @@ import {
   DiscussionResponseGeminiSchema,
 } from '@/lib/schemas/gemini-schemas';
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+if (!process.env.GEMINI_API_KEY) {
+  throw new Error('GEMINI_API_KEY environment variable is required');
+}
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // withRateLimit HOF 적용 - AI 엔드포인트로 더 엄격한 제한
 export const POST = withRateLimit(async (request: NextRequest) => {

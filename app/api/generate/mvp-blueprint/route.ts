@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { withRateLimit } from '@/lib/rate-limit';
 import { generateMvpBlueprint, generateMvpMarkdown } from '@/lib/generators';
 import { BusinessPlanData } from '@/components/idea-validator/types';
 
-export async function POST(req: NextRequest) {
+export const POST = withRateLimit(async (req: NextRequest) => {
   try {
     const body = await req.json();
     const { data, format } = body as { data: BusinessPlanData; format?: 'json' | 'markdown' };
@@ -37,4 +38,4 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   }
-}
+});

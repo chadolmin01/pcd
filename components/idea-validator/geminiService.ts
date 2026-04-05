@@ -1,4 +1,5 @@
 import { AnalysisResult, Artifacts, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, Scorecard, createEmptyScorecard, BusinessPlanData, ChatMessage, InteractionMode, DiscussionTurn, StagedReflection, ScoreEvolution } from "./types";
+import { ProgramQuestion } from "./workflow/types";
 
 // 스트리밍 콜백 타입
 export interface StreamingCallbacks {
@@ -81,7 +82,7 @@ export const analyzeIdea = async (
     // Fallback response structure
     return {
       responses: [{
-        role: 'System',
+        role: 'Developer',
         name: '시스템',
         avatar: '',
         content: '신경망 연결이 불안정합니다. 잠시 후 다시 시도해주세요.',
@@ -174,7 +175,10 @@ export const analyzeIdeaParallel = async (
   callbacks: ParallelStreamingCallbacks,
   // Staff-level reflection history (Phase 2)
   stagedReflections: StagedReflection[] = [],
-  scoreEvolution: ScoreEvolution[] = []
+  scoreEvolution: ScoreEvolution[] = [],
+  // 정부지원사업 평가항목 기반 질문
+  programQuestions: ProgramQuestion[] = [],
+  programName?: string
 ): Promise<void> => {
   try {
     const backendLevel = convertLevel(level);
@@ -192,6 +196,9 @@ export const analyzeIdeaParallel = async (
         // Staff-level reflection history
         stagedReflections,
         scoreEvolution,
+        // 정부지원사업 모드
+        programQuestions,
+        programName,
       })
     });
 

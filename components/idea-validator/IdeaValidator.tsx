@@ -2,121 +2,37 @@
 
 import React, { useState } from 'react';
 import OnboardingScreen from './OnboardingScreen';
-import SelectionScreen from './SelectionScreen';
-import ChatInterface from './ChatInterface';
-import ResultView from './ResultView';
-import { AppState, ValidationLevel, PersonaRole, DEFAULT_PERSONAS, OnboardingData, ChatMessage, Scorecard, createEmptyScorecard, InteractionMode } from './types';
-import { validationResultsStore } from '@/lib/validationResultsStore';
+import { AppState, OnboardingData } from './types';
 import { toast } from 'sonner';
-import { useUsage } from '@/src/hooks/useUsage';
 import { WorkflowContainer } from './workflow';
 
 interface IdeaValidatorProps {
   onClose?: () => void;
   onComplete?: (result: { id: string; projectIdea: string }) => void;
   embedded?: boolean; // When true, hides the top nav (used in Chat.tsx)
-  skipToLevelSelect?: boolean; // When true, skip to level selection directly
-  onBack?: () => void; // Callback when back is pressed from level selection
-  // External input control (for using persistent input from parent)
-  externalInput?: string;
-  onExternalInputChange?: (value: string) => void;
-  hideInput?: boolean;
-  onRegisterSend?: (sendFn: () => void) => void;
 }
 
-const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embedded = false, skipToLevelSelect: _skipToLevelSelect = false, onBack: _onBack, externalInput, onExternalInputChange, hideInput = false, onRegisterSend }) => {
-  const [view, setView] = useState<AppState>(AppState.ONBOARDING);
-  const [conversationHistory, setConversationHistory] = useState<string>('');
-  const [projectIdea, setProjectIdea] = useState<string>('');
-  const [reflectedAdvice, setReflectedAdvice] = useState<string[]>([]);
-  const [selectedLevel, setSelectedLevel] = useState<ValidationLevel>(ValidationLevel.MVP);
-  const [selectedPersonas, setSelectedPersonas] = useState<PersonaRole[]>(DEFAULT_PERSONAS);
-  const [interactionMode, setInteractionMode] = useState<InteractionMode>('individual');
-  const [userData, setUserData] = useState<OnboardingData | null>(null);
-  // 종합 결과물 생성용 추가 상태
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
-  const [scorecard, setScorecard] = useState<Scorecard>(createEmptyScorecard());
-  const [ideaCategory, setIdeaCategory] = useState<string>('');
-
-  // Usage tracking
-  const { recordUsage } = useUsage(userData?.email || null);
+const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embedded = false }) => {
+  const [view, setView] = useState<AppState>(AppState.WORKFLOW);
+  const [userData, setUserData] = useState<OnboardingData | null>({
+    id: 'cohort-user',
+    name: '참여자',
+    email: '',
+    organization: '',
+    privacyConsent: true,
+  });
 
   const handleOnboardingComplete = (data: OnboardingData) => {
     setUserData(data);
-    setView(AppState.SELECTION);
+    setView(AppState.WORKFLOW);
     toast.success(`${data.name}님, 환영합니다!`);
   };
 
-  // 지원사업 워크플로우 시작
-  const handleWorkflowStart = () => {
-    setView(AppState.WORKFLOW);
-    toast.success('지원사업 준비 워크플로우를 시작합니다!');
-  };
-
-  const handleSelection = (mode: 'general' | 'ai', level?: ValidationLevel, personas?: PersonaRole[], selectedInteractionMode?: InteractionMode) => {
-    if (mode === 'ai') {
-      if (level) {
-        setSelectedLevel(level);
-      }
-      if (personas) {
-        setSelectedPersonas(personas);
-      }
-      if (selectedInteractionMode) {
-        setInteractionMode(selectedInteractionMode);
-      }
-      setView(AppState.CHAT);
-    } else {
-      alert("일반 등록 모드는 데모에서 지원하지 않습니다. (AI 검증 모드를 체험해보세요)");
-    }
-  };
-
-  const [savedResultId, setSavedResultId] = useState<string | null>(null);
-
-  const handleChatComplete = async (
-    history: string,
-    idea: string,
-    advice: string[],
-    score?: number,
-    messages?: ChatMessage[],
-    currentScorecard?: Scorecard,
-    category?: string
-  ) => {
-    setConversationHistory(history);
-    setProjectIdea(idea);
-    setReflectedAdvice(advice);
-    if (messages) setChatMessages(messages);
-    if (currentScorecard) setScorecard(currentScorecard);
-    if (category) setIdeaCategory(category);
-    setView(AppState.RESULT);
-
-    // Save validation result for use in project creation
-    try {
-      const savedResult = await validationResultsStore.save({
-        projectIdea: idea,
-        conversationHistory: history,
-        reflectedAdvice: advice,
-      });
-      setSavedResultId(savedResult.id);
-
-      // Record usage for this level
-      const levelKey = selectedLevel.toLowerCase() as 'sketch' | 'mvp' | 'defense';
-      await recordUsage(levelKey, score, savedResult.id);
-
-      toast.success('검증 결과가 저장되었습니다');
-    } catch (error) {
-      console.error('Failed to save validation result:', error);
-      toast.error('저장에 실패했습니다', {
-        description: '다시 시도해주세요'
-      });
-    }
-    // Note: Don't call onComplete here - wait for user to finish viewing results
-  };
-
-  const handleResultComplete = () => {
-    // Notify parent when user is done viewing results
-    if (onComplete && savedResultId) {
-      onComplete({ id: savedResultId, projectIdea });
-    }
+  const handleLogout = () => {
+    localStorage.removeItem('prd_demo_session');
+    setUserData(null);
+    setView(AppState.ONBOARDING);
+    toast.info('로그아웃 되었습니다');
   };
 
   const renderView = () => {
@@ -127,78 +43,39 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
             <OnboardingScreen onComplete={handleOnboardingComplete} />
           </div>
         );
-      case AppState.SELECTION:
-        return (
-          <SelectionScreen
-            onSelect={handleSelection}
-            skipToLevelSelect={true}
-            onBack={() => {
-              // 로그아웃: localStorage 세션 삭제 + userData 초기화 후 온보딩 화면으로 이동
-              localStorage.removeItem('prd_demo_session');
-              setUserData(null);
-              setView(AppState.ONBOARDING);
-              toast.info('로그아웃 되었습니다');
-            }}
-            userEmail={userData?.email}
-            onWorkflowStart={handleWorkflowStart}
-          />
-        );
       case AppState.WORKFLOW:
         return userData ? (
           <WorkflowContainer
             userData={{
+              id: userData.id,
               name: userData.name,
               email: userData.email,
               organization: userData.organization,
             }}
-            onBack={() => setView(AppState.SELECTION)}
+            onBack={handleLogout}
             onComplete={() => {
-              toast.success('워크플로우가 완료되었습니다!');
-              setView(AppState.SELECTION);
+              toast.success('완료되었습니다!');
+              if (onComplete) {
+                onComplete({ id: '', projectIdea: '' });
+              }
             }}
           />
         ) : null;
-      case AppState.CHAT:
+      default:
         return (
           <div className="h-full w-full animate-in fade-in duration-500">
-            <ChatInterface
-              onComplete={handleChatComplete}
-              level={selectedLevel}
-              personas={selectedPersonas}
-              interactionMode={interactionMode}
-              externalInput={externalInput}
-              onExternalInputChange={onExternalInputChange}
-              hideInput={hideInput}
-              onRegisterSend={onRegisterSend}
-              onBack={() => setView(AppState.SELECTION)}
-            />
+            <OnboardingScreen onComplete={handleOnboardingComplete} />
           </div>
         );
-      case AppState.RESULT:
-        return (
-          <div className="h-full w-full overflow-y-auto animate-in zoom-in-95 duration-500 bg-gray-50/50">
-            <ResultView
-              conversationHistory={conversationHistory}
-              originalIdea={projectIdea}
-              reflectedAdvice={reflectedAdvice}
-              onComplete={handleResultComplete}
-              rawMessages={chatMessages}
-              scorecard={scorecard}
-              ideaCategory={ideaCategory}
-            />
-          </div>
-        );
-      default:
-        return <SelectionScreen onSelect={handleSelection} />;
     }
   };
 
   return (
     <div className="h-full flex flex-col font-sans text-draft-black selection:bg-blue-100 selection:text-blue-900 bg-white overflow-hidden">
-      {/* Top Navigation Bar - Hidden when embedded or on onboarding screen */}
-      {!embedded && view !== AppState.ONBOARDING && (
+      {/* Top Navigation Bar - Hidden when embedded or on onboarding screen or in workflow */}
+      {!embedded && view !== AppState.ONBOARDING && view !== AppState.WORKFLOW && (
         <nav className="w-full h-12 border-b border-gray-200 bg-white flex shrink-0 items-center justify-between px-4 z-50">
-          <div className="flex items-center cursor-pointer gap-2" onClick={() => setView(AppState.SELECTION)}>
+          <div className="flex items-center cursor-pointer gap-2" onClick={() => setView(AppState.WORKFLOW)}>
             <div className="bg-draft-black text-white px-1.5 py-0.5 font-mono font-bold text-sm rounded-sm">D</div>
             <span className="text-base font-bold tracking-tight">Draft.</span>
           </div>
