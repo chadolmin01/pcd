@@ -87,10 +87,10 @@ export default function GlobalError({
               onClick={reset}
               style={{
                 padding: '10px 24px',
-                backgroundColor: '#4f46e5',
+                backgroundColor: '#262626',
                 color: 'white',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: '12px',
                 fontWeight: '500',
                 cursor: 'pointer',
                 fontSize: '14px',

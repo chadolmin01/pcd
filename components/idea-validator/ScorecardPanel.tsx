@@ -34,30 +34,30 @@ const CategoryBar = memo(({
   const percentage = (score.current / score.max) * 100;
 
   return (
-    <div className={`flex items-center gap-3 py-2 ${isFailing ? 'text-red-600' : ''}`}>
+    <div className={`flex items-center gap-3 py-2 ${isFailing ? 'text-status-danger-text' : ''}`}>
       {/* 채움 상태 표시 */}
       <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
         score.filled
-          ? 'bg-gray-900 border-gray-900'
+          ? 'bg-surface-inverse border-surface-inverse'
           : isFailing
-            ? 'border-red-300 bg-red-50'
-            : 'border-gray-300'
+            ? 'border-status-danger-text/30 bg-status-danger-bg'
+            : 'border-border'
       }`}>
-        {score.filled && <Check size={10} className="text-white" />}
+        {score.filled && <Check size={10} className="text-txt-inverse" />}
       </div>
 
       {/* 카테고리명 */}
       <span className={`text-xs w-20 shrink-0 ${
-        isFailing ? 'font-bold text-red-600' : 'text-gray-600'
+        isFailing ? 'font-bold text-status-danger-text' : 'text-txt-secondary'
       }`}>
         {info.nameKo}
       </span>
 
       {/* 프로그레스 바 */}
-      <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden">
+      <div className="flex-1 h-1.5 bg-surface-sunken rounded-full overflow-hidden">
         <div
           className={`h-full rounded-full transition-all duration-500 ease-out ${
-            isFailing ? 'bg-red-500' : 'bg-gray-900'
+            isFailing ? 'bg-status-danger-text' : 'bg-surface-inverse'
           }`}
           style={{ width: `${percentage}%` }}
         />
@@ -65,14 +65,14 @@ const CategoryBar = memo(({
 
       {/* 점수 */}
       <span className={`text-xs font-mono w-12 text-right ${
-        isFailing ? 'text-red-600 font-bold' : 'text-gray-500'
+        isFailing ? 'text-status-danger-text font-bold' : 'text-txt-tertiary'
       }`}>
         {score.current}/{score.max}
       </span>
 
       {/* 과락 경고 */}
       {isFailing && minimumRequired !== undefined && (
-        <AlertCircle size={12} className="text-red-500 shrink-0" />
+        <AlertCircle size={12} className="text-status-danger-text shrink-0" />
       )}
     </div>
   );
@@ -84,9 +84,9 @@ const UpdateItem = memo(({ update }: { update: CategoryUpdate }) => {
   const info = SCORECARD_CATEGORIES[update.category];
   if (!info) return null; // 유효하지 않은 카테고리 무시
   return (
-    <div className="flex items-center gap-2 text-xs text-gray-600 py-1">
-      <span className="text-green-600 font-bold">+{update.delta}</span>
-      <span className="text-gray-900">{info.nameKo}</span>
+    <div className="flex items-center gap-2 text-xs text-txt-secondary py-1">
+      <span className="text-status-success-text font-bold">+{update.delta}</span>
+      <span className="text-txt-primary">{info.nameKo}</span>
     </div>
   );
 });
@@ -127,38 +127,38 @@ const ScorecardPanel: React.FC<ScorecardPanelProps> = ({
   ];
 
   return (
-    <div className={`bg-white border border-gray-200 rounded ${className}`}>
+    <div className={`bg-surface-card border border-border rounded-xl shadow-sm ${className}`}>
       {/* 헤더 - 총점 */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-4 border-b border-border-subtle">
         <div className="flex items-center justify-between mb-3">
-          <span className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-txt-tertiary">
             SCORE
           </span>
-          <span className="text-xl font-bold font-mono text-gray-900">
+          <span className="text-xl font-bold font-mono text-txt-primary">
             {scorecard.totalScore}/100
           </span>
         </div>
 
         {/* 전체 프로그레스 바 */}
-        <div className="h-2 bg-gray-200 rounded-full overflow-hidden mb-3">
+        <div className="h-2 bg-surface-sunken rounded-full overflow-hidden mb-3">
           <div
-            className="h-full bg-gray-900 rounded-full transition-all duration-700 ease-out"
+            className="h-full bg-surface-inverse rounded-full transition-all duration-700 ease-out"
             style={{ width: `${scorecard.totalScore}%` }}
           />
         </div>
 
         {/* 목표까지 */}
         {pointsToGoal > 0 ? (
-          <p className="text-xs text-gray-500">
+          <p className="text-xs text-txt-tertiary">
             {levelNames[targetLevel]} 등록까지{' '}
-            <span className="font-bold text-gray-900">{pointsToGoal}점</span>
+            <span className="font-bold text-txt-primary">{pointsToGoal}점</span>
           </p>
         ) : eligibility.eligible ? (
-          <p className="text-xs text-green-600 font-bold">
+          <p className="text-xs text-status-success-text font-bold">
             {levelNames[targetLevel]} 등록 가능
           </p>
         ) : (
-          <p className="text-xs text-amber-600">
+          <p className="text-xs text-status-warning-text">
             총점 달성, 과락 항목 해소 필요
           </p>
         )}
@@ -166,20 +166,20 @@ const ScorecardPanel: React.FC<ScorecardPanelProps> = ({
 
       {/* 레벨 조건 표시 (총점 달성했지만 과락이 있는 경우) */}
       {eligibility.totalPassed && eligibility.failingCategories.length > 0 && (
-        <div className="px-4 py-3 bg-red-50 border-b border-red-100">
-          <p className="text-[10px] font-bold text-red-700 mb-2">
+        <div className="px-4 py-3 bg-status-danger-bg border-b border-status-danger-text/20">
+          <p className="text-[10px] font-bold text-status-danger-text mb-2">
             {levelNames[targetLevel]} 등록 조건:
           </p>
           <div className="space-y-1">
             <div className="flex items-center gap-2 text-xs">
-              <Check size={12} className="text-green-600" />
-              <span className="text-gray-600">총점 {requirement.totalScore}점 이상</span>
+              <Check size={12} className="text-status-success-text" />
+              <span className="text-txt-secondary">총점 {requirement.totalScore}점 이상</span>
             </div>
             {eligibility.failingCategories.map((cat) => {
               const min = requirement.minimumPerCategory[cat];
               const current = scorecard[cat].current;
               return (
-                <div key={cat} className="flex items-center gap-2 text-xs text-red-600">
+                <div key={cat} className="flex items-center gap-2 text-xs text-status-danger-text">
                   <AlertCircle size={12} />
                   <span>
                     {SCORECARD_CATEGORIES[cat].nameKo} {min}점+ (현재 {current}점)
@@ -192,7 +192,7 @@ const ScorecardPanel: React.FC<ScorecardPanelProps> = ({
       )}
 
       {/* 카테고리별 점수 */}
-      <div className="p-4 border-b border-gray-100">
+      <div className="p-4 border-b border-border-subtle">
         {categories.map((cat) => (
           <CategoryBar
             key={cat}
@@ -207,7 +207,7 @@ const ScorecardPanel: React.FC<ScorecardPanelProps> = ({
       {/* 최근 업데이트 */}
       {recentUpdates.length > 0 && (
         <div className="p-4">
-          <span className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest block mb-2">
+          <span className="text-[10px] font-mono uppercase tracking-widest text-txt-tertiary block mb-2">
             RECENT
           </span>
           <div className="space-y-1">

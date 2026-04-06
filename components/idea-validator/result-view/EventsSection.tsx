@@ -20,34 +20,34 @@ interface EventTeaserCardProps {
 }
 
 export const EventTeaserCard = memo(({ event }: EventTeaserCardProps) => (
-  <div className="bg-white border border-gray-200 rounded p-4 hover:shadow-md hover:border-gray-300 transition-all group cursor-pointer">
+  <div className="bg-surface-card border border-border rounded p-4 hover:shadow-md hover:border-border-strong transition-all group cursor-pointer">
     <div className="flex items-start justify-between mb-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
+          <span className="text-[10px] font-bold text-txt-primary bg-surface-sunken px-2 py-0.5 rounded-full">
             {event.eventType}
           </span>
           {event.daysLeft <= 7 && (
-            <span className="text-[10px] font-bold text-red-600 bg-red-50 px-2 py-0.5 rounded-full animate-pulse">
+            <span className="text-[10px] font-bold text-status-danger-text bg-status-danger-bg px-2 py-0.5 rounded-full animate-pulse">
               D-{event.daysLeft}
             </span>
           )}
         </div>
-        <h4 className="font-bold text-gray-900 text-sm line-clamp-1 group-hover:text-blue-600 transition-colors">
+        <h4 className="font-bold text-txt-primary text-sm line-clamp-1 group-hover:text-txt-primary transition-colors">
           {event.title}
         </h4>
-        <p className="text-xs text-gray-500 mt-0.5">{event.organizer}</p>
+        <p className="text-xs text-txt-tertiary mt-0.5">{event.organizer}</p>
       </div>
-      <ChevronRight size={16} className="text-gray-300 group-hover:text-blue-500 group-hover:translate-x-1 transition-all shrink-0" />
+      <ChevronRight size={16} className="text-txt-disabled group-hover:text-txt-primary group-hover:translate-x-1 transition-all shrink-0" />
     </div>
     <div className="flex flex-wrap gap-1 mb-3">
       {event.tags.slice(0, 3).map((tag, i) => (
-        <span key={i} className="text-[10px] text-gray-500 bg-gray-100 px-2 py-0.5 rounded">
+        <span key={i} className="text-[10px] text-txt-tertiary bg-surface-sunken px-2 py-0.5 rounded">
           {tag}
         </span>
       ))}
     </div>
-    <div className="flex items-center gap-2 text-[10px] text-gray-400">
+    <div className="flex items-center gap-2 text-[10px] text-txt-tertiary">
       <Gift size={12} />
       <span className="line-clamp-1">{event.benefits.join(' · ')}</span>
     </div>
@@ -85,7 +85,7 @@ export const EventsTeaserSection = memo(({ tags }: EventsTeaserSectionProps) => 
     return (
       <div className="animate-pulse space-y-3">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-gray-100 rounded h-24" />
+          <div key={i} className="bg-surface-sunken rounded h-24" />
         ))}
       </div>
     );

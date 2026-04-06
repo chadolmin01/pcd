@@ -62,25 +62,25 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
         role="dialog"
         aria-modal="true"
         aria-labelledby="reflection-modal-title"
-        className="bg-white w-full max-w-xl rounded shadow-xl border border-gray-200 flex flex-col max-h-[85vh] overflow-hidden"
+        className="bg-surface-card w-full max-w-xl rounded-xl shadow-md border border-border flex flex-col max-h-[85vh] overflow-hidden"
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-gray-200 flex items-center justify-between bg-white shrink-0">
+        <div className="px-5 py-4 border-b border-border-subtle flex items-center justify-between bg-surface-card shrink-0">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gray-100 rounded text-gray-700">
+            <div className="p-2 bg-surface-sunken rounded-xl text-txt-secondary">
               {getPersonaIcon(modalState.role)}
             </div>
             <div>
-              <h3 id="reflection-modal-title" className="font-bold text-gray-900 text-sm">
+              <h3 id="reflection-modal-title" className="font-bold text-txt-primary text-sm">
                 {modalState.role} 관점 선택
               </h3>
-              <p className="text-[10px] text-gray-500 font-mono">3가지 관점 중 하나를 선택하세요</p>
+              <p className="text-[10px] text-txt-tertiary font-mono">3가지 관점 중 하나를 선택하세요</p>
             </div>
           </div>
           <button
             onClick={onClose}
             aria-label="모달 닫기"
-            className="text-gray-400 hover:text-gray-900 transition-colors p-1.5 rounded hover:bg-gray-100"
+            className="text-txt-tertiary hover:text-txt-primary transition-colors p-1.5 rounded hover:bg-surface-sunken"
           >
             <X size={18} />
           </button>
@@ -91,7 +91,7 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
           {/* 서브 관점 선택 UI */}
           {modalState.perspectives && modalState.perspectives.length > 0 ? (
             <div className="mb-5" data-tutorial="quick-select">
-              <label className="flex items-center gap-2 text-[9px] font-bold font-mono text-gray-400 uppercase mb-3 tracking-widest">
+              <label className="flex items-center gap-2 text-[10px] font-bold font-mono uppercase tracking-widest text-txt-tertiary mb-3">
                 <Sparkles size={10} />
                 관점 선택
               </label>
@@ -100,34 +100,34 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
                   <button
                     key={idx}
                     onClick={() => onSelectPerspective(idx, perspective.content)}
-                    className={`text-left p-4 rounded border transition-all ${
+                    className={`text-left p-4 rounded-xl border transition-all ${
                       modalState.selectedPerspectiveIdx === idx
-                        ? 'bg-gray-50 border-gray-300 shadow-sm'
-                        : 'bg-white border-gray-200 hover:border-gray-400'
+                        ? 'bg-surface-sunken border-border-strong shadow-sm'
+                        : 'bg-surface-card border-border hover:border-border-strong'
                     }`}
                   >
                     <div className="flex items-start gap-3">
                       <div className={`mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center shrink-0 ${
                         modalState.selectedPerspectiveIdx === idx
-                          ? 'border-gray-800 bg-gray-800'
-                          : 'border-gray-300'
+                          ? 'bg-surface-inverse border-surface-inverse'
+                          : 'border-border-strong'
                       }`}>
-                        {modalState.selectedPerspectiveIdx === idx && <Check size={12} className="text-white" />}
+                        {modalState.selectedPerspectiveIdx === idx && <Check size={12} className="text-txt-inverse" />}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-1">
-                          <span className="font-bold text-sm text-gray-900">{perspective.perspectiveLabel}</span>
-                          <span className="text-[10px] text-gray-400 font-mono">
+                          <span className="font-bold text-sm text-txt-primary">{perspective.perspectiveLabel}</span>
+                          <span className="text-[10px] text-txt-tertiary font-mono">
                             #{perspective.perspectiveId}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-600 leading-relaxed break-keep mb-2">
+                        <p className="text-xs text-txt-secondary leading-relaxed break-keep mb-2">
                           {perspective.content}
                         </p>
                         {perspective.suggestedActions && perspective.suggestedActions.length > 0 && (
                           <div className="flex flex-wrap gap-1.5 mt-2">
                             {perspective.suggestedActions.map((action, aIdx) => (
-                              <span key={aIdx} className="text-[10px] px-2 py-1 bg-blue-50 text-blue-700 rounded-full">
+                              <span key={aIdx} className="text-[10px] px-2 py-1 bg-surface-sunken text-txt-secondary rounded-full">
                                 {action}
                               </span>
                             ))}
@@ -143,15 +143,15 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
             // 기존 UI (perspectives가 없는 경우 폴백)
             <>
               <div className="mb-5">
-                <label className="text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 block tracking-widest">Original</label>
-                <div className="p-4 bg-gray-50 rounded border border-gray-200 text-sm text-gray-700 leading-relaxed break-keep">
+                <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-txt-tertiary mb-2 block">Original</label>
+                <div className="p-4 bg-surface-sunken rounded-xl border border-border text-sm text-txt-secondary leading-relaxed break-keep">
                   {modalState.originalContent}
                 </div>
               </div>
 
               {modalState.suggestedActions && modalState.suggestedActions.length > 0 && (
                 <div className="mb-5">
-                  <label className="flex items-center gap-2 text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 tracking-widest">
+                  <label className="flex items-center gap-2 text-[10px] font-bold font-mono uppercase tracking-widest text-txt-tertiary mb-2">
                     <Sparkles size={10} />
                     Quick Select
                   </label>
@@ -160,17 +160,17 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
                       <button
                         key={idx}
                         onClick={() => onReflectionTextChange(action)}
-                        className={`text-left p-3 rounded border transition-all text-sm ${
+                        className={`text-left p-3 rounded-xl border transition-all text-sm ${
                           reflectionText === action
-                            ? 'bg-gray-50 border-gray-300 shadow-sm text-gray-900'
-                            : 'bg-white border-gray-200 hover:border-gray-400 text-gray-600'
+                            ? 'bg-surface-sunken border-border-strong shadow-sm text-txt-primary'
+                            : 'bg-surface-card border-border hover:border-border-strong text-txt-secondary'
                         }`}
                       >
                         <div className="flex items-start gap-3">
                           <div className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                            reflectionText === action ? 'border-gray-800 bg-gray-800' : 'border-gray-300'
+                            reflectionText === action ? 'bg-surface-inverse border-surface-inverse' : 'border-border-strong'
                           }`}>
-                            {reflectionText === action && <Check size={10} className="text-white" />}
+                            {reflectionText === action && <Check size={10} className="text-txt-inverse" />}
                           </div>
                           <span className="break-keep text-xs">{action}</span>
                         </div>
@@ -184,24 +184,24 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
 
           {/* 나의 결정 입력 */}
           <div data-tutorial="my-decision">
-            <label className="text-[9px] font-bold font-mono text-gray-400 uppercase mb-2 block tracking-widest">
+            <label className="text-[10px] font-bold font-mono uppercase tracking-widest text-txt-tertiary mb-2 block">
               나의 결정 (수정 가능)
             </label>
             <textarea
               value={reflectionText}
               onChange={(e) => onReflectionTextChange(e.target.value)}
-              className="w-full h-24 p-4 bg-white border border-gray-200 rounded text-gray-900 text-sm leading-relaxed focus:outline-none focus:border-black resize-none transition-all"
+              className="w-full h-24 p-4 bg-surface-card border border-border rounded-xl text-txt-primary text-sm leading-relaxed focus:outline-none focus:border-border-strong resize-none transition-all"
               placeholder="선택한 관점의 조언을 수정하거나 직접 작성하세요..."
             />
           </div>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex justify-end gap-3 shrink-0">
+        <div className="p-4 border-t border-border-subtle bg-surface-sunken flex justify-end gap-3 shrink-0">
           {isAlreadyReflected && (
             <button
               onClick={onRemove}
-              className="mr-auto text-red-500 text-[10px] font-bold font-mono uppercase hover:underline"
+              className="mr-auto text-status-danger-text text-[10px] font-bold font-mono uppercase hover:underline"
             >
               선택 취소
             </button>
@@ -210,7 +210,7 @@ const ReflectionModal: React.FC<ReflectionModalProps> = ({
           <button
             onClick={onSave}
             disabled={!reflectionText.trim()}
-            className="px-5 py-2 bg-black text-white font-bold rounded hover:bg-gray-800 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-5 py-2 bg-surface-inverse text-txt-inverse font-bold rounded-xl hover:opacity-90 transition-colors text-xs disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isAlreadyReflected ? '수정' : '확인'}
           </button>

@@ -58,7 +58,31 @@
       "Bash(__NEW_LINE_049b5242cb9406d4__ echo \"\")",
       "Bash(__NEW_LINE_f7b958e2bc148b4c__ echo \"\")",
       "Bash(__NEW_LINE_16cd693010caf303__ echo \"\")",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(ping:*)",
+      "Bash(npm run capture:*)",
+      "Bash(npx playwright test --version)",
+      "Bash(powershell -Command:*)",
+      "Bash(npx playwright test:*)",
+      "Bash(python:*)",
+      "Bash(ls:*)",
+      "Bash(for i in 1 2 3 4 5 6 7 8 9 10)",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3010)",
+      "Bash(for i in 1 2 3 4 5 6 7 8 9 10 11 12)",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3011)",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3012)",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3013)",
+      "WebFetch(domain:uxdesign.cc)",
+      "WebFetch(domain:userpilot.com)",
+      "WebFetch(domain:www.groovyweb.co)",
+      "Bash(do curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3014)",
+      "Bash(npx next info:*)",
+      "Bash(tasklist:*)",
+      "Bash(for port in 3001 3002 3003 3004 3005 3006 3007 3008)",
+      "Bash(for port in 3001 3002 3004 3005 3006)",
+      "Bash(cmd /c \"taskkill /PID 38800 /F\")",
+      "Bash(more:*)",
+      "Bash(cat:*)"
     ]
   }
 }

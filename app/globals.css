@@ -3,6 +3,33 @@
 @tailwind utilities;
 
 :root {
+  /* ── Draft Design System Tokens ── */
+  --surface-bg: #FFFFFF;
+  --surface-card: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-sunken: #F5F5F5;
+  --surface-inverse: #262626;
+
+  --text-primary: #262626;
+  --text-secondary: #555555;
+  --text-tertiary: #8E8E8E;
+  --text-disabled: #C7C7C7;
+  --text-inverse: #FFFFFF;
+
+  --border-default: #E0E0E0;
+  --border-strong: #D0D0D0;
+  --border-subtle: #EEEEEE;
+
+  --status-success-bg: #F0FDF4;
+  --status-success-text: #16A34A;
+  --status-warning-bg: #FFFBEB;
+  --status-warning-text: #D97706;
+  --status-danger-bg: #FEF2F2;
+  --status-danger-text: #DC2626;
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 0 1px rgba(0,0,0,0.08);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.08), 0 0 1px rgba(0,0,0,0.06);
+
   --grid-color: rgba(0, 0, 0, 0.03);
 }
 
@@ -98,6 +125,15 @@ body {
   border-radius: 2px;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
 /* Animation utilities */
 @keyframes scale-in {
   from {
@@ -182,4 +218,22 @@ body {
     opacity: 1;
     transform: translateY(0) scale(1);
   }
+}
+
+/* Typeform 스타일 메시지 하이라이트 애니메이션 */
+@keyframes highlightMessage {
+  0% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.3);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
+  }
+}
+
+.animate-highlight-message {
+  animation: highlightMessage 1.5s ease-out forwards;
+  border-radius: 8px;
 }

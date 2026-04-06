@@ -273,6 +273,7 @@ export enum AppState {
 }
 
 export interface OnboardingData {
+  id: string; // UUID - 포트폴리오 저장용
   name: string;
   organization: string;
   email: string;
@@ -297,7 +298,8 @@ export type ScorecardCategory =
   | 'differentiation'
   | 'logicalConsistency'
   | 'feasibility'
-  | 'feedbackReflection';
+  | 'feedbackReflection'
+  | 'teamComposition';
 
 export interface CategoryScore {
   current: number;  // 현재 점수
@@ -314,6 +316,7 @@ export interface Scorecard {
   logicalConsistency: CategoryScore;
   feasibility: CategoryScore;
   feedbackReflection: CategoryScore;
+  teamComposition: CategoryScore;
   totalScore: number;
 }
 
@@ -356,6 +359,7 @@ export const SCORECARD_CATEGORIES: Record<ScorecardCategory, { nameKo: string; m
   logicalConsistency: { nameKo: '논리 일관성', max: 15, description: '전체 스토리의 논리성' },
   feasibility: { nameKo: '실현 가능성', max: 15, description: '기술/자원 제약 내 실현성' },
   feedbackReflection: { nameKo: '피드백 반영', max: 10, description: '전문가 조언 수용 및 개선' },
+  teamComposition: { nameKo: '팀 구성', max: 10, description: '팀 역량과 역할 분담' },
 };
 
 // 빈 스코어카드 생성 함수
@@ -369,6 +373,7 @@ export function createEmptyScorecard(): Scorecard {
     logicalConsistency: { current: 0, max: 15, filled: false },
     feasibility: { current: 0, max: 15, filled: false },
     feedbackReflection: { current: 0, max: 10, filled: false },
+    teamComposition: { current: 0, max: 10, filled: false },
     totalScore: 0,
   };
 }

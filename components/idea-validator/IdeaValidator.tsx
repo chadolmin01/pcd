@@ -71,24 +71,24 @@ const IdeaValidator: React.FC<IdeaValidatorProps> = ({ onClose, onComplete, embe
   };
 
   return (
-    <div className="h-full flex flex-col font-sans text-draft-black selection:bg-blue-100 selection:text-blue-900 bg-white overflow-hidden">
+    <div className="h-full flex flex-col font-sans text-draft-black selection:bg-surface-sunken bg-surface-card overflow-hidden">
       {/* Top Navigation Bar - Hidden when embedded or on onboarding screen or in workflow */}
       {!embedded && view !== AppState.ONBOARDING && view !== AppState.WORKFLOW && (
-        <nav className="w-full h-12 border-b border-gray-200 bg-white flex shrink-0 items-center justify-between px-4 z-50">
+        <nav className="w-full h-12 border-b border-border bg-surface-card flex shrink-0 items-center justify-between px-4 z-50">
           <div className="flex items-center cursor-pointer gap-2" onClick={() => setView(AppState.WORKFLOW)}>
-            <div className="bg-draft-black text-white px-1.5 py-0.5 font-mono font-bold text-sm rounded-sm">D</div>
-            <span className="text-base font-bold tracking-tight">Draft.</span>
+            <div className="bg-surface-inverse text-txt-inverse px-1.5 py-0.5 font-mono font-bold text-sm rounded-sm">D</div>
+            <span className="text-base font-bold tracking-tight text-txt-primary">Draft.</span>
           </div>
 
           <div className="flex items-center space-x-3">
-            <div className="hidden md:flex items-center space-x-2 text-[10px] font-mono text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
-              <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse"></span>
+            <div className="hidden md:flex items-center space-x-2 text-[10px] font-mono text-txt-secondary bg-surface-sunken px-2 py-1 rounded-full border border-border">
+              <span className="w-1.5 h-1.5 bg-txt-tertiary rounded-full animate-pulse"></span>
               <span>SYSTEM OPERATIONAL</span>
             </div>
             {onClose && (
               <button
                 onClick={onClose}
-                className="w-7 h-7 flex items-center justify-center rounded-sm hover:bg-gray-100 transition-colors text-gray-500"
+                className="w-7 h-7 flex items-center justify-center rounded-sm hover:bg-surface-sunken transition-colors text-txt-tertiary"
               >
                 ✕
               </button>

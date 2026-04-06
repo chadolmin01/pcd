@@ -23,6 +23,7 @@ const CATEGORY_NAMES: Record<ScorecardCategory, string> = {
   logicalConsistency: '논리일관성',
   feasibility: '실현가능성',
   feedbackReflection: '피드백반영',
+  teamComposition: '팀구성',
 };
 
 // 페르소나 → 관점 카테고리 매핑

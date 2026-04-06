@@ -120,8 +120,14 @@ export async function extractCategories(
     const prompt = buildExtractionPrompt(ideaText, summary);
 
     // Use header-based authentication (not URL query param)
+    // Use Vertex AI Express endpoint if available, otherwise AI Studio
+    const isVertexExpress = process.env.VERTEX_AI_EXPRESS === 'true';
+    const baseUrl = isVertexExpress
+      ? 'https://aiplatform.googleapis.com/v1beta/publishers/google/models/gemini-2.5-flash:generateContent'
+      : 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
+
     const response = await fetch(
-      'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent',
+      baseUrl,
       {
         method: 'POST',
         headers: {
@@ -132,7 +138,7 @@ export async function extractCategories(
           contents: [{ parts: [{ text: prompt }] }],
           generationConfig: {
             maxOutputTokens: 200,
-            temperature: 0.1, // Low temperature for consistent results
+            temperature: 0.1,
           },
         }),
         signal: controller.signal,

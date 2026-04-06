@@ -314,14 +314,14 @@ export default function WorkflowContainer({
             <div className="w-full max-w-4xl mx-auto px-6 py-8">
               {/* Hero Section */}
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-full text-sm font-medium mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-sunken text-txt-secondary rounded-full text-sm font-medium mb-4">
                   <Sparkles className="w-4 h-4" />
                   {userData.name}님, 환영합니다!
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                <h1 className="text-3xl font-bold text-txt-primary mb-3">
                   무엇을 도와드릴까요?
                 </h1>
-                <p className="text-gray-600 max-w-xl mx-auto">
+                <p className="text-txt-secondary max-w-xl mx-auto">
                   빠르게 아이디어만 검증하거나, 지원사업 준비까지 한 번에 진행할 수 있습니다.
                 </p>
               </div>
@@ -333,43 +333,43 @@ export default function WorkflowContainer({
                 {/* Quick Validation */}
                 <button
                   onClick={() => handleGoalSelect('quick')}
-                  className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 text-left hover:border-yellow-500 hover:shadow-lg transition-all"
+                  className="group relative bg-surface-card border-2 border-border rounded-xl p-6 text-left hover:border-txt-primary hover:shadow-lg transition-all"
                 >
                   <div className="absolute top-4 right-4">
-                    <span className="text-[10px] font-mono font-bold text-yellow-600 bg-yellow-50 px-2 py-1 rounded-full">
+                    <span className="text-[10px] font-mono font-bold text-txt-secondary bg-surface-sunken px-2 py-1 rounded-full">
                       5~15분
                     </span>
                   </div>
 
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shrink-0">
-                      <Zap className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-lg bg-surface-inverse flex items-center justify-center shrink-0">
+                      <Zap className="w-6 h-6 text-txt-inverse" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-yellow-600 transition-colors">
+                      <h3 className="text-xl font-bold text-txt-primary group-hover:text-txt-primary transition-colors">
                         빠른 아이디어 검증
                       </h3>
-                      <p className="text-sm text-gray-500">아이디어만 빠르게 검증</p>
+                      <p className="text-sm text-txt-tertiary">아이디어만 빠르게 검증</p>
                     </div>
                   </div>
 
-                  <ul className="space-y-2 text-sm text-gray-600 mb-4">
+                  <ul className="space-y-2 text-sm text-txt-secondary mb-4">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-yellow-500" />
+                      <Check className="w-4 h-4 text-txt-primary" />
                       AI 전문가 페르소나 선택
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-yellow-500" />
+                      <Check className="w-4 h-4 text-txt-primary" />
                       실시간 피드백 & 점수
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-yellow-500" />
+                      <Check className="w-4 h-4 text-txt-primary" />
                       검증 후 지원사업 준비 연계 가능
                     </li>
                   </ul>
 
-                  <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-                    <span className="flex items-center gap-1 text-yellow-600 font-medium text-sm group-hover:gap-2 transition-all">
+                  <div className="flex items-center justify-end pt-4 border-t border-border-subtle">
+                    <span className="flex items-center gap-1 text-txt-primary font-medium text-sm group-hover:gap-2 transition-all">
                       시작하기 <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
@@ -386,43 +386,43 @@ export default function WorkflowContainer({
                     }));
                     toast.info('지원사업에 사용할 아이디어를 선택해주세요');
                   }}
-                  className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 text-left hover:border-blue-500 hover:shadow-lg transition-all"
+                  className="group relative bg-surface-card border-2 border-border rounded-xl p-6 text-left hover:border-txt-primary hover:shadow-lg transition-all"
                 >
                   <div className="absolute top-4 right-4">
-                    <span className="text-[10px] font-mono font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded-full">
+                    <span className="text-[10px] font-mono font-bold text-txt-secondary bg-surface-sunken px-2 py-1 rounded-full">
                       30분~1시간
                     </span>
                   </div>
 
                   <div className="flex items-start gap-4 mb-4">
-                    <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                      <FileText className="w-6 h-6 text-white" />
+                    <div className="w-12 h-12 rounded-lg bg-surface-inverse flex items-center justify-center shrink-0">
+                      <FileText className="w-6 h-6 text-txt-inverse" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                      <h3 className="text-xl font-bold text-txt-primary group-hover:text-txt-primary transition-colors">
                         지원사업 준비
                       </h3>
-                      <p className="text-sm text-gray-500">아이디어 선택 → 사업계획서 완성</p>
+                      <p className="text-sm text-txt-tertiary">아이디어 선택 → 사업계획서 완성</p>
                     </div>
                   </div>
 
-                  <ul className="space-y-2 text-sm text-gray-600 mb-4">
+                  <ul className="space-y-2 text-sm text-txt-secondary mb-4">
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-blue-500" />
+                      <Check className="w-4 h-4 text-txt-primary" />
                       저장된 아이디어 불러오기
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-blue-500" />
+                      <Check className="w-4 h-4 text-txt-primary" />
                       지원서 양식에 맞춰 다듬기
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-blue-500" />
+                      <Check className="w-4 h-4 text-txt-primary" />
                       AI와 함께 사업계획서 작성
                     </li>
                   </ul>
 
-                  <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-                    <span className="flex items-center gap-1 text-blue-600 font-medium text-sm group-hover:gap-2 transition-all">
+                  <div className="flex items-center justify-end pt-4 border-t border-border-subtle">
+                    <span className="flex items-center gap-1 text-txt-primary font-medium text-sm group-hover:gap-2 transition-all">
                       아이디어 선택하기 <ArrowRight className="w-4 h-4" />
                     </span>
                   </div>
@@ -438,14 +438,14 @@ export default function WorkflowContainer({
           <div className="h-full overflow-y-auto">
             <div className="max-w-5xl mx-auto px-6 py-12">
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-700 rounded-full text-sm font-medium mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-sunken text-txt-secondary rounded-full text-sm font-medium mb-4">
                   <Users className="w-4 h-4" />
                   Step 1/3
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                <h1 className="text-3xl font-bold text-txt-primary mb-3">
                   검증 페르소나 선택
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-txt-secondary">
                   3명의 AI 전문가를 선택하세요. 다양한 관점에서 피드백을 받을 수 있습니다.
                 </p>
               </div>
@@ -466,20 +466,20 @@ export default function WorkflowContainer({
                       }}
                       className={`relative p-4 rounded-xl border-2 text-left transition-all ${
                         isSelected
-                          ? 'border-yellow-500 bg-yellow-50'
-                          : 'border-gray-200 hover:border-gray-300 bg-white'
+                          ? 'border-txt-primary bg-surface-sunken'
+                          : 'border-border hover:border-border-strong bg-surface-card'
                       }`}
                     >
                       {isSelected && (
-                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-yellow-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-surface-inverse text-txt-inverse rounded-full flex items-center justify-center text-xs font-bold">
                           {selectionIndex + 1}
                         </div>
                       )}
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${isSelected ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-600'}`}>
+                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center mb-2 ${isSelected ? 'bg-surface-sunken text-txt-primary' : 'bg-surface-sunken text-txt-secondary'}`}>
                         {getPersonaIcon(persona.icon, 20)}
                       </div>
-                      <div className="font-semibold text-sm text-gray-900">{persona.nameKo}</div>
-                      <div className="text-[10px] text-gray-500">{persona.name}</div>
+                      <div className="font-semibold text-sm text-txt-primary">{persona.nameKo}</div>
+                      <div className="text-[10px] text-txt-tertiary">{persona.name}</div>
                     </button>
                   );
                 })}
@@ -489,13 +489,13 @@ export default function WorkflowContainer({
                 <button
                   onClick={() => completeStep('quick-persona')}
                   disabled={selectedPersonas.length !== 3}
-                  className="px-6 py-3 bg-yellow-500 text-white font-semibold rounded-lg hover:bg-yellow-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                  className="px-6 py-3 bg-surface-inverse text-txt-inverse font-semibold rounded-lg hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                 >
                   다음: 난이도 선택
                   <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
-              <p className="text-center text-sm text-gray-500 mt-3">
+              <p className="text-center text-sm text-txt-tertiary mt-3">
                 {selectedPersonas.length}/3 선택됨
               </p>
             </div>
@@ -507,14 +507,14 @@ export default function WorkflowContainer({
           <div className="h-full overflow-y-auto">
             <div className="max-w-3xl mx-auto px-6 py-12">
               <div className="text-center mb-8">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-yellow-50 text-yellow-700 rounded-full text-sm font-medium mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-sunken text-txt-secondary rounded-full text-sm font-medium mb-4">
                   <Layers className="w-4 h-4" />
                   Step 2/3
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                <h1 className="text-3xl font-bold text-txt-primary mb-3">
                   검증 난이도 선택
                 </h1>
-                <p className="text-gray-600">
+                <p className="text-txt-secondary">
                   아이디어의 완성도에 맞는 검증 수준을 선택하세요.
                 </p>
               </div>
@@ -532,21 +532,21 @@ export default function WorkflowContainer({
                     }}
                     className={`w-full p-6 rounded-xl border-2 text-left transition-all flex items-center gap-4 ${
                       selectedLevel === level
-                        ? 'border-yellow-500 bg-yellow-50'
-                        : 'border-gray-200 hover:border-yellow-300 bg-white'
+                        ? 'border-txt-primary bg-surface-sunken'
+                        : 'border-border hover:border-border-strong bg-surface-card'
                     }`}
                   >
-                    <div className="w-12 h-12 rounded-lg bg-yellow-100 flex items-center justify-center text-yellow-600">
+                    <div className="w-12 h-12 rounded-lg bg-surface-sunken flex items-center justify-center text-txt-primary">
                       <Icon className="w-6 h-6" />
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-lg text-gray-900">{nameKo}</span>
-                        <span className="text-sm text-gray-500">{name}</span>
+                        <span className="font-bold text-lg text-txt-primary">{nameKo}</span>
+                        <span className="text-sm text-txt-tertiary">{name}</span>
                       </div>
-                      <p className="text-sm text-gray-600">{desc}</p>
+                      <p className="text-sm text-txt-secondary">{desc}</p>
                     </div>
-                    <div className="text-sm font-medium text-yellow-600 bg-yellow-100 px-3 py-1 rounded-full">
+                    <div className="text-sm font-medium text-txt-secondary bg-surface-sunken px-3 py-1 rounded-full">
                       {time}
                     </div>
                   </button>
@@ -584,13 +584,13 @@ export default function WorkflowContainer({
 
             {/* Continue to Full Workflow CTA */}
             <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 flex items-center gap-4">
-                <div className="text-sm text-gray-600">
+              <div className="bg-surface-card rounded-2xl shadow-2xl border border-border p-4 flex items-center gap-4">
+                <div className="text-sm text-txt-secondary">
                   검증 결과를 바탕으로 사업계획서까지 작성하시겠어요?
                 </div>
                 <button
                   onClick={handleContinueToFull}
-                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all font-semibold"
+                  className="flex items-center gap-2 px-6 py-3 bg-surface-inverse text-txt-inverse rounded-xl hover:bg-gray-800 transition-all font-semibold"
                 >
                   <FileText className="w-5 h-5" />
                   지원사업 준비 계속하기
@@ -606,21 +606,21 @@ export default function WorkflowContainer({
             {/* Back Button */}
             <button
               onClick={() => goToStep('goal-select')}
-              className="absolute top-4 left-4 p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              className="absolute top-4 left-4 p-2 hover:bg-surface-sunken rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-5 h-5 text-gray-600" />
+              <ArrowLeft className="w-5 h-5 text-txt-secondary" />
             </button>
             <div className="w-full max-w-6xl mx-auto px-6">
               {/* Hero Section */}
               <div className="text-center mb-6">
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-full text-sm font-medium mb-4">
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-surface-sunken text-txt-secondary rounded-full text-sm font-medium mb-4">
                   <Building2 className="w-4 h-4" />
                   정부 지원사업 합격률을 높여드립니다
                 </div>
-                <h1 className="text-3xl font-bold text-gray-900 mb-3">
+                <h1 className="text-3xl font-bold text-txt-primary mb-3">
                   어떤 지원사업에 도전하시나요?
                 </h1>
-                <p className="text-gray-600 max-w-xl mx-auto">
+                <p className="text-txt-secondary max-w-xl mx-auto">
                   선택하신 프로그램의 <strong>평가항목에 최적화된 검증 질문</strong>을 준비했습니다.
                   <br />각 항목별로 철저히 준비하여 합격 가능성을 높여보세요.
                 </p>
@@ -633,50 +633,50 @@ export default function WorkflowContainer({
                     key={program.id}
                     onClick={() => handleProgramSelect(program.id)}
                     aria-label={`${program.nameKo} 프로그램 선택. ${program.sections.length}개 평가항목, 예상 소요시간 ${calculateEstimatedTime(program)}`}
-                    className="group relative bg-white border-2 border-gray-200 rounded-xl p-6 text-left hover:border-blue-500 hover:shadow-lg transition-all"
+                    className="group relative bg-surface-card border-2 border-border rounded-xl p-6 text-left hover:border-txt-primary hover:shadow-lg transition-all"
                   >
                     {/* Badge */}
                     <div className="absolute top-4 right-4">
-                      <span className="text-[10px] font-mono font-bold text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      <span className="text-[10px] font-mono font-bold text-txt-tertiary bg-surface-sunken px-2 py-1 rounded-full">
                         {program.sections.length}개 평가항목
                       </span>
                     </div>
 
                     {/* Icon & Title */}
                     <div className="flex items-start gap-4 mb-4">
-                      <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shrink-0">
-                        <Building2 className="w-6 h-6 text-white" />
+                      <div className="w-12 h-12 rounded-lg bg-surface-inverse flex items-center justify-center shrink-0">
+                        <Building2 className="w-6 h-6 text-txt-inverse" />
                       </div>
                       <div>
-                        <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        <h3 className="text-xl font-bold text-txt-primary group-hover:text-txt-primary transition-colors">
                           {program.nameKo}
                         </h3>
-                        <p className="text-sm text-gray-500">{program.description}</p>
+                        <p className="text-sm text-txt-tertiary">{program.description}</p>
                       </div>
                     </div>
 
                     {/* Sections Preview */}
                     <div className="space-y-2 mb-4">
-                      <p className="text-xs font-medium text-gray-400 uppercase">평가항목 미리보기</p>
+                      <p className="text-xs font-medium text-txt-tertiary uppercase">평가항목 미리보기</p>
                       <div className="flex flex-wrap gap-2">
                         {program.sections.map((section) => (
                           <span
                             key={section.id}
-                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-gray-50 text-gray-700 text-xs rounded-md border border-gray-200"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-sunken text-txt-secondary text-xs rounded-md border border-border"
                           >
                             {section.titleKo}
-                            <span className="text-gray-400 font-medium">{section.weight}점</span>
+                            <span className="text-txt-tertiary font-medium">{section.weight}점</span>
                           </span>
                         ))}
                       </div>
                     </div>
 
                     {/* CTA */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <span className="text-sm text-gray-500">
-                        예상 소요시간 <strong className="text-gray-900">{calculateEstimatedTime(program)}</strong>
+                    <div className="flex items-center justify-between pt-4 border-t border-border-subtle">
+                      <span className="text-sm text-txt-tertiary">
+                        예상 소요시간 <strong className="text-txt-primary">{calculateEstimatedTime(program)}</strong>
                       </span>
-                      <span className="flex items-center gap-1 text-blue-600 font-medium text-sm group-hover:gap-2 transition-all">
+                      <span className="flex items-center gap-1 text-txt-primary font-medium text-sm group-hover:gap-2 transition-all">
                         시작하기 <ArrowRight className="w-4 h-4" />
                       </span>
                     </div>
@@ -767,7 +767,7 @@ export default function WorkflowContainer({
               <div className="fixed bottom-6 right-6 z-50">
                 <button
                   onClick={() => completeStep('prd')}
-                  className="flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-xl shadow-lg hover:bg-blue-700 transition-all hover:scale-105"
+                  className="flex items-center gap-2 px-6 py-3 bg-surface-inverse text-txt-inverse rounded-xl shadow-lg hover:bg-gray-800 transition-all hover:scale-105"
                 >
                   <span>사업계획서 작성하기</span>
                   <ArrowRight className="w-5 h-5" />
@@ -797,7 +797,7 @@ export default function WorkflowContainer({
             <div className="fixed bottom-6 right-6 z-50">
               <button
                 onClick={() => completeStep('business-plan')}
-                className="flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-xl shadow-lg hover:bg-green-700 transition-all hover:scale-105"
+                className="flex items-center gap-2 px-6 py-3 bg-surface-inverse text-txt-inverse rounded-xl shadow-lg hover:bg-gray-800 transition-all hover:scale-105"
               >
                 <Download className="w-5 h-5" />
                 <span>내보내기</span>
@@ -811,11 +811,11 @@ export default function WorkflowContainer({
           <div className="h-full overflow-y-auto p-6">
             <div className="max-w-4xl mx-auto">
               <div className="text-center mb-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Check className="w-8 h-8 text-green-600" />
+                <div className="w-16 h-16 bg-status-success-bg rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Check className="w-8 h-8 text-status-success-text" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-900">모든 준비가 완료되었습니다!</h2>
-                <p className="text-gray-600 mt-2">
+                <h2 className="text-2xl font-bold text-txt-primary">모든 준비가 완료되었습니다!</h2>
+                <p className="text-txt-secondary mt-2">
                   아래에서 원하는 형식으로 문서를 내보내세요.
                 </p>
               </div>
@@ -949,10 +949,10 @@ export default function WorkflowContainer({
   const hideGNB = workflowState.currentStep === 'goal-select';
 
   return (
-    <div className="h-full flex flex-col bg-white">
+    <div className="h-full flex flex-col bg-surface-card">
       {/* Simple GNB - goal-select에서는 숨김 */}
       {!hideGNB && (
-        <div className="flex-shrink-0 h-12 border-b border-gray-100 bg-white px-4 flex items-center gap-3">
+        <div className="flex-shrink-0 h-12 border-b border-border-subtle bg-surface-card px-4 flex items-center gap-3">
           <button
             onClick={() => {
               if (workflowState.currentStep === 'validation' && workflowState.workflowMode === 'full') {
@@ -964,17 +964,17 @@ export default function WorkflowContainer({
                 goToStep('goal-select');
               }
             }}
-            className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+            className="p-1.5 hover:bg-surface-sunken rounded-lg transition-colors"
           >
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
+            <ArrowLeft className="w-5 h-5 text-txt-secondary" />
           </button>
-          <span className="text-lg font-bold text-gray-900">Draft</span>
+          <span className="text-lg font-bold text-txt-primary">Draft</span>
         </div>
       )}
 
       {/* Header with Stepper - goal-select에서는 숨김 */}
       {showHeader && (
-        <div className="flex-shrink-0 border-b border-gray-200 bg-white px-4 py-3">
+        <div className="flex-shrink-0 border-b border-border bg-surface-card px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
               <button
@@ -990,12 +990,12 @@ export default function WorkflowContainer({
                     onBack?.();
                   }
                 }}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-surface-sunken rounded-lg transition-colors"
               >
-                <ArrowLeft className="w-5 h-5 text-gray-600" />
+                <ArrowLeft className="w-5 h-5 text-txt-secondary" />
               </button>
               <div>
-                <h1 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+                <h1 className="text-lg font-bold text-txt-primary flex items-center gap-2">
                   {workflowState.workflowMode === 'quick' ? (
                     <>
                       <Zap className="w-5 h-5 text-yellow-500" />
@@ -1003,12 +1003,12 @@ export default function WorkflowContainer({
                     </>
                   ) : (
                     <>
-                      <Sparkles className="w-5 h-5 text-blue-500" />
+                      <Sparkles className="w-5 h-5 text-txt-tertiary" />
                       지원사업 준비 워크플로우
                     </>
                   )}
                 </h1>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-txt-tertiary">
                   {workflowState.workflowMode === 'quick'
                     ? `${userData.name}님의 아이디어를 빠르게 검증합니다`
                     : `${userData.name}님의 아이디어를 사업계획서까지 완성합니다`
@@ -1020,13 +1020,13 @@ export default function WorkflowContainer({
             {workflowState.workflowMode === 'full' && workflowState.selectedProgram && (
               <button
                 onClick={() => goToStep('program-select')}
-                className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors"
+                className="flex items-center gap-2 px-3 py-1.5 bg-surface-sunken rounded-lg hover:bg-surface-sunken transition-colors"
               >
-                <Building2 className="w-4 h-4 text-blue-600" />
-                <span className="text-sm font-medium text-blue-700">
+                <Building2 className="w-4 h-4 text-txt-primary" />
+                <span className="text-sm font-medium text-txt-primary">
                   {GOVERNMENT_PROGRAMS.find((p) => p.id === workflowState.selectedProgram)?.nameKo}
                 </span>
-                <span className="text-xs text-blue-500">변경</span>
+                <span className="text-xs text-txt-tertiary">변경</span>
               </button>
             )}
           </div>

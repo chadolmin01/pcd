@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { genAI } from '@/lib/gemini-client';
 import { withRateLimit } from '@/lib/rate-limit';
 import {
   getAnalyzeSystemInstruction,
@@ -20,10 +20,6 @@ import {
   DiscussionResponseGeminiSchema,
 } from '@/lib/schemas/gemini-schemas';
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
-}
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // withRateLimit HOF 적용 - AI 엔드포인트로 더 엄격한 제한
 export const POST = withRateLimit(async (request: NextRequest) => {
@@ -81,7 +77,7 @@ export const POST = withRateLimit(async (request: NextRequest) => {
       : AnalyzeResponseGeminiSchema;
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       systemInstruction: getAnalyzeSystemInstruction(level, personas),
       generationConfig: {
         responseMimeType: 'application/json',

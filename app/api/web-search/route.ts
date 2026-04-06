@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withRateLimit } from '@/lib/rate-limit';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
-}
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+import { genAI } from '@/lib/gemini-client';
 
 // POST /api/web-search - Search and summarize web information
 export const POST = withRateLimit(async (request: NextRequest) => {
@@ -22,7 +17,7 @@ export const POST = withRateLimit(async (request: NextRequest) => {
 
     // Use Gemini to generate a comprehensive response with its knowledge
     // In production, this would integrate with actual web search APIs
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash' });
 
     const prompt = `당신은 창업 지원서 작성을 돕는 리서치 전문가입니다.
 

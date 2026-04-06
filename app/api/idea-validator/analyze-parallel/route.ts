@@ -1,11 +1,6 @@
 import { NextRequest } from 'next/server';
 import { withRateLimit } from '@/lib/rate-limit';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { streamObject } from 'ai';
-import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import {
-  getSimpleSystemInstruction,
-} from '@/lib/prompts';
+import { genAI } from '@/lib/gemini-client';
 import { buildCombinedOpinionPrompt, buildSynthesisPrompt, getRandomClosingRemark } from '@/lib/prompts/parallel-prompts';
 import { buildReflectionHistory } from '@/lib/prompts/build-reflection-history';
 import {
@@ -17,16 +12,6 @@ import {
   ParsedWithScorecard,
 } from '@/lib/validations';
 import { DiscussionResponseSchema, DiscussionTurn } from '@/lib/schemas/ai-sdk-schemas';
-
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
-}
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-
-// Vercel AI SDK용 Google provider
-const google = createGoogleGenerativeAI({
-  apiKey: process.env.GEMINI_API_KEY,
-});
 
 // Exponential backoff with jitter for 429 errors
 async function callWithBackoff<T>(
@@ -283,70 +268,95 @@ export const POST = withRateLimit(async (request: NextRequest) => {
           };
 
           try {
-            const { partialObjectStream } = streamObject({
-              model: google('gemini-2.0-flash'),
-              schema: DiscussionResponseSchema,
-              prompt: synthesisPrompt,
-              temperature: 0.65,
+            // Direct @google/genai streaming (no Vercel AI SDK dependency)
+            const synthesisModel = genAI.getGenerativeModel({
+              model: 'gemini-2.5-flash',
+              generationConfig: {
+                maxOutputTokens: 4000,
+                temperature: 0.65,
+                responseMimeType: 'application/json',
+              }
             });
 
-            for await (const partial of partialObjectStream) {
-              if (partial.discussion && partial.discussion.length > 0) {
-                // 새 턴이 추가되면 이전 턴들은 완성된 것으로 간주
-                const currentLength = partial.discussion.length;
+            const synthesisResult = await callWithBackoff(() =>
+              synthesisModel.generateContentStream(synthesisPrompt)
+            );
 
-                // 이전에 전송하지 않은 완성된 턴들 전송
-                for (let i = sentDiscussionCount; i < currentLength; i++) {
-                  const turn = partial.discussion[i] as DiscussionTurn;
+            let jsonBuffer = '';
+            for await (const chunk of synthesisResult.stream) {
+              jsonBuffer += chunk.text();
 
-                  // 마지막 턴이 아니면 완성된 것 (다음 턴이 존재)
-                  // 마지막 턴이면 메시지 완성 여부 확인
-                  const isComplete = (i < currentLength - 1) || isMessageComplete(turn?.message);
+              // Try incremental parsing of discussion turns from partial JSON
+              try {
+                // Extract discussion array items as they become available
+                const discussionMatch = jsonBuffer.match(/"discussion"\s*:\s*\[([\s\S]*)/);
+                if (discussionMatch) {
+                  const arrContent = discussionMatch[1];
+                  // Find complete objects by matching balanced braces
+                  const turnRegex = /\{[^{}]*"persona"\s*:\s*"[^"]*"[^{}]*"message"\s*:\s*"[^"]*"[^{}]*\}/g;
+                  const turns = arrContent.match(turnRegex) || [];
 
-                  if (turn && turn.persona && turn.message && isComplete) {
-                    // 이미 전송한 턴인지 확인
-                    const alreadySent = prevDiscussion.some(
-                      (p, idx) => idx === i && p.message === turn.message
-                    );
+                  for (let i = sentDiscussionCount; i < turns.length; i++) {
+                    try {
+                      const turn = JSON.parse(turns[i]) as DiscussionTurn;
+                      if (turn.persona && turn.message && isMessageComplete(turn.message)) {
+                        const alreadySent = prevDiscussion.some(
+                          (p, idx) => idx === i && p.message === turn.message
+                        );
+                        if (!alreadySent) {
+                          const sseData = `data: ${JSON.stringify({
+                            type: 'discussion',
+                            data: turn
+                          })}\n\n`;
+                          safeEnqueue(encoder.encode(sseData));
+                          sentDiscussionCount = i + 1;
+                          prevDiscussion[i] = turn;
+                        }
+                      }
+                    } catch { /* partial JSON, skip */ }
+                  }
+                }
+              } catch { /* incremental parse error, continue buffering */ }
+            }
 
-                    if (!alreadySent) {
-                      const sseData = `data: ${JSON.stringify({
-                        type: 'discussion',
-                        data: turn
-                      })}\n\n`;
-                      safeEnqueue(encoder.encode(sseData));
-                      sentDiscussionCount = i + 1;
-                    }
+            // Parse complete JSON response
+            try {
+              const fullResponse = JSON.parse(jsonBuffer);
+              const validated = DiscussionResponseSchema.safeParse(fullResponse);
+
+              if (validated.success) {
+                // Send any remaining discussion turns
+                const discussion = validated.data.discussion || [];
+                for (let i = sentDiscussionCount; i < discussion.length; i++) {
+                  const turn = discussion[i];
+                  if (turn && turn.persona && turn.message) {
+                    const sseData = `data: ${JSON.stringify({
+                      type: 'discussion',
+                      data: turn
+                    })}\n\n`;
+                    safeEnqueue(encoder.encode(sseData));
                   }
                 }
 
-                // 현재 상태 저장
-                prevDiscussion = [...(partial.discussion as DiscussionTurn[])];
-              }
-
-              // 최종 데이터 저장
-              if (partial.responses && partial.scorecard && partial.metrics) {
                 finalData = {
-                  responses: partial.responses,
-                  metrics: partial.metrics,
-                  scorecard: partial.scorecard,
-                  categoryUpdates: partial.categoryUpdates || [],
+                  responses: validated.data.responses,
+                  metrics: validated.data.metrics,
+                  scorecard: validated.data.scorecard,
+                  categoryUpdates: validated.data.categoryUpdates || [],
+                };
+              } else {
+                console.warn('Synthesis validation failed:', validated.error);
+                // Use raw parsed data as fallback
+                finalData = {
+                  responses: fullResponse.responses || [],
+                  metrics: fullResponse.metrics || { summary: '검증 실패' },
+                  scorecard: fullResponse.scorecard || currentScorecard,
+                  categoryUpdates: fullResponse.categoryUpdates || [],
                 };
               }
-            }
-
-            // 스트림 끝난 후 아직 전송 안 된 턴 전송
-            if (prevDiscussion.length > sentDiscussionCount) {
-              for (let i = sentDiscussionCount; i < prevDiscussion.length; i++) {
-                const turn = prevDiscussion[i];
-                if (turn && turn.persona && turn.message) {
-                  const sseData = `data: ${JSON.stringify({
-                    type: 'discussion',
-                    data: turn
-                  })}\n\n`;
-                  safeEnqueue(encoder.encode(sseData));
-                }
-              }
+            } catch (parseError) {
+              console.error('Final JSON parse error:', parseError);
+              throw parseError;
             }
           } catch (streamError) {
             console.error('Streaming synthesis error:', streamError);
@@ -358,7 +368,7 @@ export const POST = withRateLimit(async (request: NextRequest) => {
                 content: o.opinion,
                 perspectives: []
               })),
-              metrics: { summary: '합성 중 오류 발생' },
+              metrics: { summary: '합성 중 오류 발생', keyStrengths: [], keyRisks: [] },
               scorecard: currentScorecard,
               categoryUpdates: [],
             };
@@ -389,11 +399,20 @@ export const POST = withRateLimit(async (request: NextRequest) => {
               }
             }
 
+            // Ensure metrics has required array fields
+            const rawMetrics = (corrected.metrics || finalData.metrics || {}) as Record<string, unknown>;
+            const safeMetrics = {
+              ...rawMetrics,
+              keyStrengths: Array.isArray(rawMetrics.keyStrengths) ? rawMetrics.keyStrengths : [],
+              keyRisks: Array.isArray(rawMetrics.keyRisks) ? rawMetrics.keyRisks : [],
+              summary: rawMetrics.summary || '',
+            };
+
             const response: Record<string, unknown> = {
               responses: finalResponses,
-              metrics: corrected.metrics || finalData.metrics,
+              metrics: safeMetrics,
               scorecard: corrected.scorecard || currentScorecard,
-              categoryUpdates: corrected.categoryUpdates || finalData.categoryUpdates,
+              categoryUpdates: corrected.categoryUpdates || finalData.categoryUpdates || [],
             };
             if (correctionResult.warning) {
               response.warning = correctionResult.warning;

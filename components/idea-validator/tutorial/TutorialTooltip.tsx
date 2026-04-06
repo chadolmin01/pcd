@@ -126,7 +126,7 @@ const TutorialTooltip: React.FC = () => {
       {/* Tooltip */}
       <div
         ref={tooltipRef}
-        className="fixed z-[10001] w-72 bg-white rounded-sm shadow-2xl border border-gray-200 animate-in fade-in zoom-in-95 duration-200"
+        className="fixed z-[10001] w-72 bg-surface-card rounded-sm shadow-2xl border border-border animate-in fade-in zoom-in-95 duration-200"
         style={{
           top: position?.top ?? -9999,
           left: position?.left ?? -9999,
@@ -140,7 +140,7 @@ const TutorialTooltip: React.FC = () => {
             <div
               key={i}
               className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                i === currentStep ? 'bg-black' : i < currentStep ? 'bg-gray-400' : 'bg-gray-200'
+                i === currentStep ? 'bg-surface-inverse' : i < currentStep ? 'bg-txt-tertiary' : 'bg-border'
               }`}
             />
           ))}
@@ -148,28 +148,28 @@ const TutorialTooltip: React.FC = () => {
 
         {/* Content */}
         <div className="p-4">
-          <h3 className="font-bold text-gray-900 text-sm mb-2">{step.title}</h3>
-          <p className="text-xs text-gray-500 leading-relaxed break-keep">{step.content}</p>
+          <h3 className="font-bold text-txt-primary text-sm mb-2">{step.title}</h3>
+          <p className="text-xs text-txt-tertiary leading-relaxed break-keep">{step.content}</p>
         </div>
 
         {/* Navigation */}
-        <div className="flex items-center justify-between px-4 pb-4 pt-2 border-t border-gray-100">
+        <div className="flex items-center justify-between px-4 pb-4 pt-2 border-t border-border-subtle">
           <button
             onClick={prevStep}
             disabled={currentStep === 0}
-            className="flex items-center gap-1 text-xs text-gray-400 hover:text-gray-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+            className="flex items-center gap-1 text-xs text-txt-tertiary hover:text-txt-primary disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
           >
             <ChevronLeft size={14} />
             <span>이전</span>
           </button>
 
-          <span className="text-[10px] font-mono text-gray-400">
+          <span className="text-[10px] font-mono text-txt-tertiary">
             {currentStep + 1}/{totalSteps}
           </span>
 
           <button
             onClick={nextStep}
-            className="flex items-center gap-1 text-xs font-bold text-gray-900 hover:text-black transition-colors"
+            className="flex items-center gap-1 text-xs font-bold text-txt-primary hover:text-txt-primary transition-colors"
           >
             <span>{currentStep === totalSteps - 1 ? '완료' : '다음'}</span>
             <ChevronRight size={14} />
@@ -179,7 +179,7 @@ const TutorialTooltip: React.FC = () => {
         {/* Close button */}
         <button
           onClick={endTutorial}
-          className="absolute top-3 right-3 p-1 text-gray-400 hover:text-gray-900 transition-colors"
+          className="absolute top-3 right-3 p-1 text-txt-tertiary hover:text-txt-primary transition-colors"
           aria-label="튜토리얼 닫기"
         >
           <X size={14} />

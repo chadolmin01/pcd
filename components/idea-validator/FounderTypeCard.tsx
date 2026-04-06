@@ -91,8 +91,8 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
             {type.emoji}
           </div>
           <div>
-            <div className="font-bold text-gray-900">{type.name}</div>
-            <div className="text-xs text-gray-500">{type.taglineKo}</div>
+            <div className="font-bold text-txt-primary">{type.name}</div>
+            <div className="text-xs text-txt-tertiary">{type.taglineKo}</div>
           </div>
         </div>
       </div>
@@ -103,7 +103,7 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
     <>
       <div
         ref={cardRef}
-        className={`bg-white rounded overflow-hidden shadow-lg ${className}`}
+        className={`bg-surface-card rounded overflow-hidden shadow-lg ${className}`}
         style={{ width: '520px', maxWidth: '90vw' }}
       >
         {/* Header with Full Image - Wider aspect ratio */}
@@ -134,8 +134,8 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
             >
               {type.emoji}
             </div>
-            <div className="text-xl font-bold text-gray-900 mb-1">{type.emoji} {type.name}</div>
-            {userName && <div className="text-xs text-gray-500 mb-1">@{userName}</div>}
+            <div className="text-xl font-bold text-txt-primary mb-1">{type.emoji} {type.name}</div>
+            {userName && <div className="text-xs text-txt-tertiary mb-1">@{userName}</div>}
             <div className="text-xs font-medium" style={{ color: type.color }}>
               "{type.tagline}"
             </div>
@@ -149,16 +149,16 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
             <div className="space-y-4">
               {/* Like Section */}
               <div>
-                <div className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">
+                <div className="text-[9px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">
                   Like
                 </div>
-                <div className="font-bold text-sm text-gray-900 mb-1">{type.likePerson}</div>
-                <p className="text-[11px] text-gray-500 leading-relaxed line-clamp-3">{type.likeStoryKo}</p>
+                <div className="font-bold text-sm text-txt-primary mb-1">{type.likePerson}</div>
+                <p className="text-[11px] text-txt-tertiary leading-relaxed line-clamp-3">{type.likeStoryKo}</p>
               </div>
 
               {/* Traits */}
               <div>
-                <div className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">
+                <div className="text-[9px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">
                   특성
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -180,17 +180,17 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
               {/* 5-Axis Graph */}
               {axes && (
                 <div>
-                  <div className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">
+                  <div className="text-[9px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">
                     성향 분석
                   </div>
                   <div className="space-y-2">
                     {(Object.keys(axisLabels) as (keyof AxisScores)[]).map(axis => (
                       <div key={axis}>
-                        <div className="flex justify-between text-[8px] text-gray-400 mb-0.5">
+                        <div className="flex justify-between text-[8px] text-txt-tertiary mb-0.5">
                           <span>{axisLabels[axis][0]}</span>
                           <span>{axisLabels[axis][1]}</span>
                         </div>
-                        <div className="h-1 bg-gray-100 rounded-full relative">
+                        <div className="h-1 bg-surface-sunken rounded-full relative">
                           <div
                             className="absolute top-1/2 -translate-y-1/2 w-2 h-2 rounded-full transition-all"
                             style={{
@@ -207,7 +207,7 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
 
               {/* Best Match */}
               <div className="p-3 rounded" style={{ backgroundColor: bestMatch.bgColor }}>
-                <div className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">
+                <div className="text-[9px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">
                   Best Match
                 </div>
                 <div className="flex items-center gap-2">
@@ -218,8 +218,8 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
                     {bestMatch.emoji}
                   </div>
                   <div>
-                    <div className="font-bold text-xs text-gray-900">{bestMatch.name}</div>
-                    <div className="text-[10px] text-gray-500">{bestMatch.taglineKo}</div>
+                    <div className="font-bold text-xs text-txt-primary">{bestMatch.name}</div>
+                    <div className="text-[10px] text-txt-tertiary">{bestMatch.taglineKo}</div>
                   </div>
                 </div>
               </div>
@@ -228,11 +228,11 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="px-5 py-3 border-t border-gray-100 flex items-center justify-between">
-          <span className="text-[9px] text-gray-400 font-mono">Draft. Founder Type</span>
+        <div className="px-5 py-3 border-t border-border-subtle flex items-center justify-between">
+          <span className="text-[9px] text-txt-tertiary font-mono">Draft. Founder Type</span>
           <button
             onClick={() => setShowMethodology(true)}
-            className="text-[9px] text-gray-400 hover:text-gray-600 font-mono transition-colors"
+            className="text-[9px] text-txt-tertiary hover:text-txt-secondary font-mono transition-colors"
           >
             Methodology
           </button>
@@ -245,14 +245,14 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
           <button
             onClick={handleExport}
             disabled={isExporting}
-            className="flex items-center gap-2 px-5 py-2.5 bg-gray-900 text-white rounded text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 bg-surface-inverse text-txt-inverse rounded text-sm font-medium hover:bg-gray-800 transition-colors disabled:opacity-50"
           >
             <Download size={14} />
             {isExporting ? '생성 중...' : '이미지 저장'}
           </button>
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 px-5 py-2.5 bg-white border border-gray-200 text-gray-700 rounded text-sm font-medium hover:bg-gray-50 transition-colors"
+            className="flex items-center gap-2 px-5 py-2.5 bg-surface-card border border-border text-txt-secondary rounded text-sm font-medium hover:bg-surface-sunken transition-colors"
           >
             <Share2 size={14} />
             공유하기
@@ -263,33 +263,33 @@ const FounderTypeCard: React.FC<FounderTypeCardProps> = ({
       {/* Methodology Modal */}
       {showMethodology && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-          <div className="bg-white rounded max-w-sm w-full overflow-hidden">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <h3 className="font-bold text-sm text-gray-900">Methodology</h3>
+          <div className="bg-surface-card rounded max-w-sm w-full overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border-subtle">
+              <h3 className="font-bold text-sm text-txt-primary">Methodology</h3>
               <button
                 onClick={() => setShowMethodology(false)}
-                className="p-1 text-gray-400 hover:text-gray-600 transition-colors"
+                className="p-1 text-txt-tertiary hover:text-txt-secondary transition-colors"
                 aria-label="닫기"
               >
                 <X size={16} />
               </button>
             </div>
             <div className="p-5">
-              <p className="text-xs text-gray-500 mb-4">
+              <p className="text-xs text-txt-tertiary mb-4">
                 Draft의 창업자 유형 분석은 다음 연구를 기반으로 합니다:
               </p>
               <div className="space-y-2">
                 {METHODOLOGY_REFERENCES.map((ref, idx) => (
-                  <div key={idx} className="flex items-start gap-2 text-xs text-gray-700">
-                    <span className="text-gray-300">•</span>
+                  <div key={idx} className="flex items-start gap-2 text-xs text-txt-secondary">
+                    <span className="text-txt-disabled">•</span>
                     <span>
                       {ref.name}
-                      {ref.year && <span className="text-gray-400 ml-1">({ref.year})</span>}
+                      {ref.year && <span className="text-txt-tertiary ml-1">({ref.year})</span>}
                     </span>
                   </div>
                 ))}
               </div>
-              <p className="text-[10px] text-gray-400 mt-4 pt-4 border-t border-gray-100">
+              <p className="text-[10px] text-txt-tertiary mt-4 pt-4 border-t border-border-subtle">
                 AI가 의사결정 패턴을 분석하여 창업자 성향을 도출합니다.
               </p>
             </div>

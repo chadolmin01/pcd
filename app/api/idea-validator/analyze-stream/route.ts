@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { withRateLimit } from '@/lib/rate-limit';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { genAI } from '@/lib/gemini-client';
 import {
   getAnalyzeSystemInstruction,
   buildStreamingDiscussionPrompt,
@@ -18,10 +18,6 @@ import {
   ParsedWithScorecard,
 } from '@/lib/validations';
 
-if (!process.env.GEMINI_API_KEY) {
-  throw new Error('GEMINI_API_KEY environment variable is required');
-}
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // 스트리밍 API 라우트 - 토론 모드 전용
 export const POST = withRateLimit(async (request: NextRequest) => {
@@ -79,7 +75,7 @@ export const POST = withRateLimit(async (request: NextRequest) => {
     );
 
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       systemInstruction: getAnalyzeSystemInstruction(level, personas),
       generationConfig: {
         maxOutputTokens: 3000,

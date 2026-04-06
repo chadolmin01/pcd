@@ -14,13 +14,13 @@ interface ScoreBarProps {
 export const ScoreBar = memo(({ label, score, colorClass, icon }: ScoreBarProps) => (
   <div className="mb-5">
     <div className="flex justify-between items-center mb-2">
-      <div className="flex items-center gap-2 text-sm font-semibold text-gray-700">
+      <div className="flex items-center gap-2 text-sm font-semibold text-txt-secondary">
         {icon}
         {label}
       </div>
-      <span className="text-sm font-bold text-gray-900">{score}</span>
+      <span className="text-sm font-bold text-txt-primary">{score}</span>
     </div>
-    <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+    <div className="w-full bg-surface-sunken rounded-full h-2 overflow-hidden">
       <div
         className={`h-2 rounded-full transition-all duration-1000 ease-out ${colorClass}`}
         style={{ width: `${score}%` }}
@@ -81,8 +81,8 @@ export const ValidationScoresCard = memo(({ scorecard, fallbackScores }: Validat
   const scores = calculateValidationScores(scorecard, fallbackScores);
 
   return (
-    <div className="bg-white border border-gray-200 rounded p-6 shadow-sm">
-      <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-6">Validation Scores</h3>
+    <div className="bg-surface-card border border-border rounded p-6 shadow-sm">
+      <h3 className="text-xs font-bold text-txt-tertiary uppercase tracking-widest mb-6">Validation Scores</h3>
 
       <ScoreBar
         label="Tech Feasibility"

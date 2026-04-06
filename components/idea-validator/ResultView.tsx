@@ -166,11 +166,11 @@ const ResultView: React.FC<ResultViewProps> = ({
     return (
       <div className="flex flex-col items-center justify-center h-full min-h-[50vh] text-center space-y-6">
         <div className="relative">
-          <div className="w-20 h-20 border-4 border-gray-100 border-t-draft-black rounded-full animate-spin" />
+          <div className="w-20 h-20 border-4 border-border-subtle border-t-draft-black rounded-full animate-spin" />
         </div>
         <div>
           <h2 className="text-2xl font-bold text-draft-black mb-2 tracking-tight">문서 생성 및 정리 중...</h2>
-          <p className="text-gray-500 max-w-md mx-auto text-sm">
+          <p className="text-txt-tertiary max-w-md mx-auto text-sm">
             전문가들의 피드백을 구조화된 데이터로 변환하고 있습니다.<br/>
             PRD v1.0과 채용 공고(JD), 그리고 실행 계획이 곧 준비됩니다.
           </p>
@@ -184,19 +184,19 @@ const ResultView: React.FC<ResultViewProps> = ({
   return (
     <div className="w-full py-4 px-3 md:px-4">
       {/* Success Banner */}
-      <div className="mb-8 bg-white border border-gray-200 rounded p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-sm">
+      <div className="mb-8 bg-surface-card border border-border rounded p-6 md:p-8 flex flex-col md:flex-row items-center justify-between shadow-sm">
         <div className="flex items-center gap-6">
-          <div className="bg-black text-white p-3 rounded-full shrink-0">
+          <div className="bg-surface-inverse text-txt-inverse p-3 rounded-full shrink-0">
             <Shield size={24} />
           </div>
           <div>
             <div className="flex items-center gap-3 mb-1">
               <h2 className="text-xl md:text-2xl font-bold text-draft-black tracking-tight">프로젝트 검증 완료</h2>
-              <span className="px-2 py-0.5 rounded bg-black text-white text-[10px] md:text-xs font-bold tracking-widest uppercase">
+              <span className="px-2 py-0.5 rounded bg-surface-inverse text-txt-inverse text-[10px] md:text-xs font-bold tracking-widest uppercase">
                 AI Verified
               </span>
             </div>
-            <p className="text-gray-500 text-sm md:text-base">
+            <p className="text-txt-tertiary text-sm md:text-base">
               Draft 시스템 검증을 통과했습니다. PRD와 JD가 준비되었습니다.
             </p>
           </div>
@@ -204,25 +204,25 @@ const ResultView: React.FC<ResultViewProps> = ({
         <div className="mt-6 md:mt-0 flex items-center gap-4">
           {/* Mobile Score */}
           <div className="md:hidden text-center">
-            <div className="text-xs text-gray-400 uppercase tracking-widest font-mono mb-1">Score</div>
+            <div className="text-xs text-txt-tertiary uppercase tracking-widest font-mono mb-1">Score</div>
             <div className="flex items-baseline justify-center gap-1">
               <span className="text-3xl font-black text-draft-black tracking-tighter">{artifacts?.score}</span>
-              <span className="text-sm text-gray-400 font-medium">/100</span>
+              <span className="text-sm text-txt-tertiary font-medium">/100</span>
             </div>
           </div>
           {/* Desktop Score */}
-          <div className="text-right hidden md:block border-l border-gray-100 pl-6">
-            <div className="text-xs text-gray-400 uppercase tracking-widest font-mono mb-1">Total Score</div>
+          <div className="text-right hidden md:block border-l border-border-subtle pl-6">
+            <div className="text-xs text-txt-tertiary uppercase tracking-widest font-mono mb-1">Total Score</div>
             <div className="flex items-baseline justify-end gap-1">
               <span className="text-4xl font-black text-draft-black tracking-tighter">{artifacts?.score}</span>
-              <span className="text-lg text-gray-400 font-medium">/100</span>
+              <span className="text-lg text-txt-tertiary font-medium">/100</span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {onComplete && (
               <button
                 onClick={onComplete}
-                className="px-6 py-3 bg-gray-100 text-gray-700 font-bold rounded hover:bg-gray-200 transition-colors flex items-center gap-2 text-sm"
+                className="px-6 py-3 bg-surface-sunken text-txt-secondary font-bold rounded hover:bg-border transition-colors flex items-center gap-2 text-sm"
               >
                 완료
               </button>
@@ -244,10 +244,10 @@ const ResultView: React.FC<ResultViewProps> = ({
           label={synthesizing ? '생성중...' : '사업계획서'}
         />
         <div className="flex items-center gap-2 ml-auto">
-          <button className="p-2 rounded border border-gray-200 bg-white text-gray-600" aria-label="다운로드">
+          <button className="p-2 rounded border border-border bg-surface-card text-txt-secondary" aria-label="다운로드">
             <Download size={16} />
           </button>
-          <button className="p-2 rounded bg-black text-white" aria-label="공유하기">
+          <button className="p-2 rounded bg-surface-inverse text-txt-inverse" aria-label="공유하기">
             <Share2 size={16} />
           </button>
         </div>
@@ -275,10 +275,10 @@ const ResultView: React.FC<ResultViewProps> = ({
         <div className="w-full lg:col-span-7 order-1 lg:order-none">
           <div className="relative">
             {activeTab === 'overview' && (
-              <div className="animate-in fade-in duration-300 space-y-8 bg-white border border-gray-200 rounded p-8 md:p-12 shadow-sm min-h-[800px]">
+              <div className="animate-in fade-in duration-300 space-y-8 bg-surface-card border border-border rounded p-8 md:p-12 shadow-sm min-h-[800px]">
                 <div>
                   <h2 className="text-2xl font-bold text-draft-black mb-4">실행 계획 (Action Plan)</h2>
-                  <p className="text-gray-500 mb-6">
+                  <p className="text-txt-tertiary mb-6">
                     성공적인 프로젝트 런칭을 위해 각 팀이 즉시 착수해야 할 핵심 과제입니다.
                   </p>
                   <div className="grid grid-cols-1 gap-4">
@@ -334,15 +334,15 @@ const ResultView: React.FC<ResultViewProps> = ({
             )}
 
             {activeTab === 'businessPlan' && !businessPlan && !synthesizing && (
-              <div className="animate-in fade-in duration-300 bg-white border border-gray-200 rounded p-12 text-center">
-                <FileJson size={48} className="mx-auto text-gray-300 mb-4" />
-                <h3 className="text-lg font-bold text-gray-900 mb-2">사업계획서 생성</h3>
-                <p className="text-gray-500 mb-6 max-w-md mx-auto">
+              <div className="animate-in fade-in duration-300 bg-surface-card border border-border rounded p-12 text-center">
+                <FileJson size={48} className="mx-auto text-txt-disabled mb-4" />
+                <h3 className="text-lg font-bold text-txt-primary mb-2">사업계획서 생성</h3>
+                <p className="text-txt-tertiary mb-6 max-w-md mx-auto">
                   대화 내역을 분석하여 정부 지원사업 제출용 사업계획서 JSON을 생성합니다.
                 </p>
                 <button
                   onClick={handleSynthesizeBusinessPlan}
-                  className="px-6 py-3 bg-black text-white font-bold rounded hover:bg-gray-800 transition-colors"
+                  className="px-6 py-3 bg-surface-inverse text-txt-inverse font-bold rounded hover:bg-gray-800 transition-colors"
                 >
                   사업계획서 생성하기
                 </button>
@@ -350,10 +350,10 @@ const ResultView: React.FC<ResultViewProps> = ({
             )}
 
             {activeTab === 'businessPlan' && synthesizing && (
-              <div className="animate-in fade-in duration-300 bg-white border border-gray-200 rounded p-12 text-center">
-                <Loader2 size={48} className="mx-auto text-gray-400 mb-4 animate-spin" />
-                <h3 className="text-lg font-bold text-gray-900 mb-2">사업계획서 생성 중...</h3>
-                <p className="text-gray-500 max-w-md mx-auto">
+              <div className="animate-in fade-in duration-300 bg-surface-card border border-border rounded p-12 text-center">
+                <Loader2 size={48} className="mx-auto text-txt-tertiary mb-4 animate-spin" />
+                <h3 className="text-lg font-bold text-txt-primary mb-2">사업계획서 생성 중...</h3>
+                <p className="text-txt-tertiary max-w-md mx-auto">
                   대화 내역을 분석하고 구조화된 데이터로 변환하고 있습니다.
                 </p>
               </div>
@@ -364,9 +364,9 @@ const ResultView: React.FC<ResultViewProps> = ({
         {/* Right Column: Summary & Scores */}
         <div className="w-full lg:col-span-3 space-y-3 sm:space-y-4 order-2 lg:order-none">
           {/* Idea Summary Card */}
-          <div className="bg-white border border-gray-200 rounded p-6 shadow-sm">
-            <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Project Summary</h3>
-            <p className="text-gray-800 text-sm leading-relaxed font-medium">
+          <div className="bg-surface-card border border-border rounded p-6 shadow-sm">
+            <h3 className="text-xs font-bold text-txt-tertiary uppercase tracking-widest mb-4">Project Summary</h3>
+            <p className="text-txt-primary text-sm leading-relaxed font-medium">
               {artifacts?.ideaSummary || "요약 정보를 불러오는 중입니다..."}
             </p>
           </div>
@@ -399,7 +399,7 @@ const TabButton: React.FC<TabButtonProps> = ({ active, onClick, icon, label, dis
     onClick={onClick}
     disabled={disabled}
     className={`flex items-center gap-2 px-4 py-2 rounded text-sm font-semibold whitespace-nowrap transition-all ${
-      active ? 'bg-black text-white' : 'bg-white border border-gray-200 text-gray-600'
+      active ? 'bg-surface-inverse text-txt-inverse' : 'bg-surface-card border border-border text-txt-secondary'
     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
   >
     {icon} {label}
@@ -419,14 +419,14 @@ const NavButton: React.FC<NavButtonProps> = ({ active, onClick, icon, label, dis
     onClick={onClick}
     disabled={disabled}
     className={`w-full flex items-center justify-between px-4 py-3 rounded transition-all ${
-      active ? 'bg-white border border-gray-200 shadow-sm text-draft-black' : 'text-gray-500 hover:bg-gray-100 hover:text-gray-900'
+      active ? 'bg-surface-card border border-border shadow-sm text-draft-black' : 'text-txt-tertiary hover:bg-surface-sunken hover:text-txt-primary'
     } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
   >
     <div className="flex items-center gap-3">
       {icon}
       <span className="font-semibold text-sm">{label}</span>
     </div>
-    {active && <div className="w-1.5 h-1.5 bg-black rounded-full" />}
+    {active && <div className="w-1.5 h-1.5 bg-surface-inverse rounded-full" />}
   </button>
 );
 

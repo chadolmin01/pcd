@@ -91,6 +91,16 @@ export function getRandomClosingRemark(persona: string): string {
  * @param persona - 페르소나 ID
  * @param viewType - 'positive' | 'concern' 관점 타입
  */
+// 정부지원사업 평가항목 질문 타입
+interface ProgramQuestion {
+  id: string;
+  question: string;
+  purpose: string;
+  evaluationCriteria: string[];
+  sectionId: string;
+  sectionTitle: string;
+}
+
 /**
  * 통합 의견 프롬프트 - 한 번의 호출로 모든 페르소나 의견 생성
  */
@@ -99,7 +109,9 @@ export function buildCombinedOpinionPrompt(
   historyContext: string,
   personas: string[],
   _scorecard: Scorecard | null,
-  _level: Level = 'mvp'
+  _level: Level = 'mvp',
+  programQuestions: ProgramQuestion[] = [],
+  programName?: string
 ): string {
   const safeIdea = escapePromptContent(idea);
   const safeHistory = escapePromptContent(historyContext);
@@ -111,10 +123,48 @@ export function buildCombinedOpinionPrompt(
     return `- ${persona} (${desc?.nameKo || persona}): ${desc?.focus || persona} | 검토: ${focusCategories}`;
   }).join('\n');
 
+  // 정부지원사업 모드: 평가항목 정보 추가
+  let programContext = '';
+  if (programQuestions.length > 0 && programName) {
+    const sections = [...new Set(programQuestions.map(q => q.sectionTitle))];
+    const sectionInfo = sections.map(section => {
+      const questions = programQuestions.filter(q => q.sectionTitle === section);
+      return `  - ${section}: ${questions.map(q => q.question).join(' / ')}`;
+    }).join('\n');
+
+    // 평가기준 상세 추출
+    const criteriaBySection = sections.map(section => {
+      const questions = programQuestions.filter(q => q.sectionTitle === section);
+      const allCriteria = questions.flatMap(q => q.evaluationCriteria || []);
+      return `  [${section}]\n    평가기준: ${allCriteria.slice(0, 4).join(' | ')}`;
+    }).join('\n');
+
+    programContext = `
+<government_program_strict>
+프로그램: ${programName}
+모드: 정부지원사업 심사 시뮬레이션
+
+${criteriaBySection}
+
+**엄격한 평가 규칙**:
+1. 각 평가항목별로 현재 준비 수준을 [상/중/하]로 판정
+2. [하] 판정 항목은 반드시 "부족한 점"과 "보완 방법"을 구체적으로 제시
+3. 사용자가 언급하지 않은 내용은 "언급 없음 - 추가 설명 필요"로 명시
+4. 막연한 칭찬 금지. 구체적 근거 없이 "좋다/훌륭하다" 사용 금지
+
+**페르소나별 집중 영역**:
+- Developer/CTO: 실현가능성, 기술적 차별성
+- Designer/PM: 문제정의, 사용자 니즈
+- VC/CFO: 성장전략, 수익모델, 시장규모
+- Marketer: 고객획득, 경쟁력
+</government_program_strict>
+`;
+  }
+
   return `<context>
 ${safeHistory}
 </context>
-
+${programContext}
 <user_input>${safeIdea}</user_input>
 
 <personas>
@@ -123,11 +173,18 @@ ${personaDescriptions}
 
 <instructions>
 각 페르소나 관점에서 이 아이디어에 대한 의견을 작성하세요.
+${programQuestions.length > 0 ? `
+**[정부지원사업 심사 모드]**
+프로그램: ${programName}
+- 실제 심사위원처럼 엄격하게 평가
+- 각 의견에 관련 평가항목 기준 언급 필수
+- 부족한 부분은 "OO 항목 관점에서 [하] 수준. 이유: ..." 형식으로 명확히 지적
+- 보완 제안은 구체적 액션으로 제시 (예: "고객 인터뷰 5건 이상 수행 필요")` : ''}
 
 각 의견은:
-- 강점 또는 기회 1가지
-- 우려 또는 질문 1가지
-- 총 3-4문장으로 균형있게 작성
+- 강점 또는 기회 1가지 (근거 포함)
+- 우려 또는 개선점 1가지 (구체적 보완 방법 포함)
+- 총 4-5문장으로 작성
 
 **중요**: 모든 페르소나의 의견 길이가 비슷해야 합니다.
 
@@ -185,7 +242,9 @@ export function buildSynthesisPrompt(
   personas: string[],
   scorecard: Scorecard | null,
   turnNumber: number = 1,
-  level: Level = 'mvp'
+  level: Level = 'mvp',
+  programQuestions: ProgramQuestion[] = [],
+  programName?: string
 ): string {
   // 페르소나 최소 3개 보장 (기본값 사용)
   const p0 = personas[0] || 'Developer';
@@ -201,6 +260,57 @@ export function buildSynthesisPrompt(
 
   // 프롬프트 인젝션 방지를 위한 이스케이프
   const safeIdea = escapePromptContent(idea);
+
+  // 정부지원사업 모드: 평가항목 컨텍스트 생성
+  let programContext = '';
+  if (programQuestions.length > 0 && programName) {
+    const sections = [...new Set(programQuestions.map(q => q.sectionTitle))];
+    const sectionInfo = sections.map(section => {
+      const questions = programQuestions.filter(q => q.sectionTitle === section);
+      const criteria = questions.flatMap(q => q.evaluationCriteria).slice(0, 3);
+      return `  - ${section}: ${criteria.join(', ')}`;
+    }).join('\n');
+
+    // 섹션별 가중치 정보 추출 (있는 경우)
+    const sectionDetails = sections.map(section => {
+      const questions = programQuestions.filter(q => q.sectionTitle === section);
+      const allCriteria = questions.flatMap(q => q.evaluationCriteria || []);
+      return `  - ${section}: ${allCriteria.slice(0, 3).join(', ')}`;
+    }).join('\n');
+
+    programContext = `
+<government_evaluation_synthesis>
+프로그램: ${programName}
+모드: 정부지원사업 최종 평가 시뮬레이션
+
+평가 섹션:
+${sectionDetails}
+
+**최종 합성 규칙 (엄격 적용)**:
+
+1. **섹션별 준비도 평가** (필수 출력):
+   토론 종합 시 아래 형식으로 각 섹션 평가 포함:
+   "📊 [${sections[0] || '문제인식'}] 준비도: ●●●○○ (60%) - 핵심 이슈: ..."
+   "📊 [${sections[1] || '실현가능성'}] 준비도: ●●○○○ (40%) - 핵심 이슈: ..."
+
+2. **합격 가능성 예측** (discussion 마지막 턴에 포함):
+   "현재 준비 상태 기준 ${programName} 합격 가능성: 약 XX%"
+   근거와 함께 제시
+
+3. **최우선 보완 과제** (필수):
+   합격률을 높이기 위해 가장 먼저 해결해야 할 항목 1개 지정
+   구체적 액션 플랜 제시
+
+4. **점수 연동**:
+   - 섹션 준비도가 60% 미만이면 관련 scorecard 카테고리 점수 상승 제한
+   - 80% 이상이면 해당 카테고리 +3점 이상 가능
+
+**금지 사항**:
+- "전반적으로 좋습니다" 같은 모호한 평가 금지
+- 근거 없는 높은 합격률 제시 금지
+</government_evaluation_synthesis>
+`;
+  }
 
   const opinionsText = opinions.map(o => {
     const desc = PERSONA_DESCRIPTIONS[o.persona];
@@ -221,7 +331,7 @@ export function buildSynthesisPrompt(
 진짜 위험한 부분은 명확히 지적하되,
 건설적인 다음 액션을 항상 제시한다.
 </max_truth_objective>
-
+${programContext}
 <user_input>${safeIdea}</user_input>
 
 <scorecard>

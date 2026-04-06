@@ -21,10 +21,40 @@ const config: Config = {
           blue: '#0052CC',
           accent: '#FF4D4D',
         },
+        // Draft Design System Token Colors
+        surface: {
+          bg: 'var(--surface-bg)',
+          card: 'var(--surface-card)',
+          elevated: 'var(--surface-elevated)',
+          sunken: 'var(--surface-sunken)',
+          inverse: 'var(--surface-inverse)',
+        },
+        txt: {
+          primary: 'var(--text-primary)',
+          secondary: 'var(--text-secondary)',
+          tertiary: 'var(--text-tertiary)',
+          disabled: 'var(--text-disabled)',
+          inverse: 'var(--text-inverse)',
+        },
+        border: {
+          DEFAULT: 'var(--border-default)',
+          strong: 'var(--border-strong)',
+          subtle: 'var(--border-subtle)',
+        },
+        status: {
+          'success-bg': 'var(--status-success-bg)',
+          'success-text': 'var(--status-success-text)',
+          'warning-bg': 'var(--status-warning-bg)',
+          'warning-text': 'var(--status-warning-text)',
+          'danger-bg': 'var(--status-danger-bg)',
+          'danger-text': 'var(--status-danger-text)',
+        },
       },
       boxShadow: {
         soft: '0 2px 8px rgba(0,0,0,0.05)',
         sharp: '2px 2px 0px 0px rgba(0,0,0,0.1)',
+        sm: 'var(--shadow-sm)',
+        md: 'var(--shadow-md)',
       },
       animation: {
         marquee: 'marquee 30s linear infinite',

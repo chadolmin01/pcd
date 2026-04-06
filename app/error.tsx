@@ -14,12 +14,12 @@ export default function Error({
   }, [error]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-surface-sunken">
       <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-8 text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
+        <div className="bg-surface-card rounded-xl shadow-md p-8 text-center border border-border">
+          <div className="w-16 h-16 mx-auto mb-4 bg-status-danger-bg rounded-full flex items-center justify-center">
             <svg
-              className="w-8 h-8 text-red-600"
+              className="w-8 h-8 text-status-danger-text"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -32,27 +32,27 @@ export default function Error({
               />
             </svg>
           </div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <h2 className="text-xl font-bold text-txt-primary mb-2">
             오류가 발생했습니다
           </h2>
-          <p className="text-gray-600 mb-6">
+          <p className="text-txt-secondary mb-6">
             예상치 못한 문제가 발생했습니다. 다시 시도해 주세요.
           </p>
           {error.digest && (
-            <p className="text-xs text-gray-400 mb-4">
+            <p className="text-xs text-txt-tertiary mb-4">
               Error ID: {error.digest}
             </p>
           )}
           <div className="flex gap-3 justify-center">
             <button
               onClick={reset}
-              className="px-6 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors"
+              className="px-6 py-2 bg-surface-inverse text-txt-inverse rounded-xl font-medium hover:opacity-90 transition-opacity"
             >
               다시 시도
             </button>
             <button
               onClick={() => window.location.href = '/'}
-              className="px-6 py-2 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+              className="px-6 py-2 bg-surface-sunken text-txt-secondary rounded-xl font-medium hover:bg-border transition-colors"
             >
               홈으로
             </button>

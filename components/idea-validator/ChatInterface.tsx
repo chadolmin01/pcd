@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { ArrowRight, Check, AlertTriangle, Layers, Lock, Zap, Sword, HelpCircle } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
+import { ArrowRight, Check, AlertTriangle, Layers, Lock, Zap, Sword, HelpCircle, Building2, Target } from 'lucide-react';
 import { toast } from 'sonner';
 import { ChatMessage, AnalysisMetrics, ValidationLevel, PersonaRole, PERSONA_PRESETS, DEFAULT_PERSONAS, PerspectiveAdvice, Scorecard, CategoryUpdate, createEmptyScorecard, ScorecardCategory, InteractionMode, StagedReflection, ScoreEvolution } from './types';
+import { ProgramQuestion, GOVERNMENT_PROGRAMS } from './workflow/types';
 import { buildReflectionSummaryForUser } from '@/lib/prompts/build-reflection-history';
 import { PERSONA_CATEGORY_MAP } from '@/lib/prompts/persona-config';
 import { analyzeIdea, analyzeIdeaParallel } from './geminiService';
@@ -42,10 +43,13 @@ interface ChatInterfaceProps {
   hideInput?: boolean;
   onRegisterSend?: (sendFn: () => void) => void;
   onBack?: () => void; // Go back to selection screen
+  // 프로그램별 검증 질문 (정부지원사업 워크플로우용)
+  programQuestions?: ProgramQuestion[];
+  programName?: string;
 }
 
 
-const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, personas = DEFAULT_PERSONAS, interactionMode = 'individual', externalInput, onExternalInputChange, hideInput = false, onRegisterSend, onBack }) => {
+const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, personas = DEFAULT_PERSONAS, interactionMode = 'individual', externalInput, onExternalInputChange, hideInput = false, onRegisterSend, onBack, programQuestions, programName }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [internalInput, setInternalInput] = useState('');
 
@@ -95,6 +99,87 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   // Stabilize personas array for useEffect dependency (arrays compared by reference)
   const personasKey = personas.join(',');
 
+  // 정부지원사업 모드 계산
+  const isGovernmentMode = useMemo(() => {
+    return programQuestions && programQuestions.length > 0 && !!programName;
+  }, [programQuestions, programName]);
+
+  // 정부지원사업 섹션 정보
+  const governmentSections = useMemo(() => {
+    if (!isGovernmentMode || !programQuestions || !programName) return [];
+    const sections = [...new Set(programQuestions.map(q => q.sectionTitle))];
+
+    // 프로그램 설정에서 weight 정보 가져오기
+    const programConfig = GOVERNMENT_PROGRAMS.find(p => p.nameKo === programName);
+
+    return sections.map(title => {
+      const questions = programQuestions.filter(q => q.sectionTitle === title);
+      const sectionConfig = programConfig?.sections.find(s => s.titleKo === title);
+      return {
+        title,
+        questionCount: questions.length,
+        weight: sectionConfig?.weight || 0,
+        criteria: questions.flatMap(q => q.evaluationCriteria || []).slice(0, 4),
+        questions: questions.map(q => q.question),
+      };
+    });
+  }, [isGovernmentMode, programQuestions, programName]);
+
+  // 정부지원사업 모드: 현재 섹션 진행 상태
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0);
+
+  // 마일스톤 달성 추적 (Notion/Slack 스타일)
+  const [achievedMilestones, setAchievedMilestones] = useState<string[]>([]);
+
+  // 현재 섹션 정보
+  const currentSection = useMemo(() => {
+    if (!isGovernmentMode || governmentSections.length === 0) return null;
+    return governmentSections[Math.min(currentSectionIndex, governmentSections.length - 1)];
+  }, [isGovernmentMode, governmentSections, currentSectionIndex]);
+
+  // 섹션 진행률 계산
+  const sectionProgress = useMemo(() => {
+    if (!isGovernmentMode || governmentSections.length === 0) return 0;
+    return Math.round(((currentSectionIndex + 1) / governmentSections.length) * 100);
+  }, [isGovernmentMode, governmentSections.length, currentSectionIndex]);
+
+  // 다음 섹션으로 이동
+  const advanceToNextSection = useCallback(() => {
+    if (currentSectionIndex < governmentSections.length - 1) {
+      setCurrentSectionIndex(prev => prev + 1);
+      return true;
+    }
+    return false;
+  }, [currentSectionIndex, governmentSections.length]);
+
+  // 마일스톤 달성 체크 및 축하 (Notion/Slack 스타일)
+  useEffect(() => {
+    if (!isGovernmentMode || sectionProgress === 0) return;
+
+    const milestones = [
+      { threshold: 25, id: '25', title: '첫 번째 마일스톤!', desc: '문제인식 섹션 완료', emoji: '🎯' },
+      { threshold: 50, id: '50', title: '절반 완료!', desc: '검증의 중간 지점 도달', emoji: '🚀' },
+      { threshold: 75, id: '75', title: '거의 다 왔어요!', desc: '마지막 섹션 진입', emoji: '💪' },
+      { threshold: 100, id: '100', title: '검증 완료!', desc: '모든 평가항목 검토 완료', emoji: '🎉' },
+    ];
+
+    milestones.forEach(({ threshold, id, title, desc, emoji }) => {
+      if (sectionProgress >= threshold && !achievedMilestones.includes(id)) {
+        setAchievedMilestones(prev => [...prev, id]);
+        toast.success(
+          <div className="flex items-center gap-3">
+            <div className="text-2xl">{emoji}</div>
+            <div>
+              <p className="font-bold text-txt-primary">{title}</p>
+              <p className="text-xs text-txt-tertiary">{desc}</p>
+            </div>
+          </div>,
+          { duration: 4000 }
+        );
+      }
+    });
+  }, [sectionProgress, isGovernmentMode, achievedMilestones]);
+
   // 새 세션 시작 + Analytics 초기화
   useEffect(() => {
     startNewSession();
@@ -119,6 +204,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       greeting = "환영합니다! 아이디어 스케치 모드입니다. 부담 갖지 말고 생각나는 대로 말씀해 주세요. 우리가 함께 다듬어 드릴게요!";
     } else if (level === ValidationLevel.DEFENSE) {
       greeting = "투자자 방어 모드입니다. 준비 되셨습니까? 논리가 빈약하면 살아남기 힘들 겁니다. 아이디어를 제시하세요.";
+    } else if (programName && programQuestions && programQuestions.length > 0) {
+      // 정부지원사업 모드 전용 인사말
+      const firstSection = programQuestions[0]?.sectionTitle || '문제인식';
+      greeting = `${programName} 맞춤 검증을 시작합니다! 🎯\n\n정부지원사업 심사위원 관점에서 아이디어를 평가해 드릴게요. 첫 번째 평가항목 '${firstSection}'부터 검토해 볼까요?\n\n아래 입력창에 아이디어를 자유롭게 설명해 주세요.`;
     } else {
       greeting = "Draft. 시스템 가동. MVP 빌딩 모드입니다. 가상의 공동 창업자들(개발, 디자인, VC)이 냉철하게 검증을 시작합니다.";
     }
@@ -138,7 +227,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
     }]);
   }, [level]);
 
-  // 스크롤 함수 - 최신 메시지가 화면 최상단에 위치하도록
+  // 스크롤 함수 - 최신 메시지가 화면 최상단에 위치하도록 (Typeform 스타일 하이라이트)
   const scrollToLatest = useCallback(() => {
     setTimeout(() => {
       if (latestMessageRef.current) {
@@ -146,8 +235,13 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
           behavior: 'smooth',
           block: 'start'
         });
+        // 하이라이트 애니메이션 추가
+        latestMessageRef.current.classList.add('animate-highlight-message');
+        setTimeout(() => {
+          latestMessageRef.current?.classList.remove('animate-highlight-message');
+        }, 1500);
       }
-    }, 100);
+    }, 150);
   }, []);
 
   // 최신 메시지가 항상 보이도록 자동 스크롤
@@ -336,7 +430,17 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
               }));
 
               setIsTyping(false);
-              setTurnCount(prev => prev + 1);
+              setTurnCount(prev => {
+                const newTurnCount = prev + 1;
+                // 정부지원사업 모드: 2턴마다 다음 섹션으로 자동 이동
+                if (isGovernmentMode && newTurnCount > 0 && newTurnCount % 2 === 0) {
+                  const nextSectionIdx = Math.floor(newTurnCount / 2);
+                  if (nextSectionIdx < governmentSections.length) {
+                    setCurrentSectionIndex(nextSectionIdx);
+                  }
+                }
+                return newTurnCount;
+              });
               const newRound = incrementRound();
               setCurrentRound(newRound);
 
@@ -386,7 +490,10 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
           },
           // Staff-level reflection history (Phase 2)
           allStagedReflections,
-          scoreEvolution
+          scoreEvolution,
+          // 정부지원사업 평가항목 기반 질문
+          programQuestions || [],
+          programName
         );
         return;
       }
@@ -457,7 +564,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       const aiMsg: ChatMessage = {
         id: (Date.now() + 1).toString(),
         isUser: false,
-        responses: analysisResult.responses.map(r => ({ ...r, isReflected: false })),
+        responses: (analysisResult.responses || []).map(r => ({ ...r, isReflected: false })),
         timestamp: Date.now(),
       };
 
@@ -739,15 +846,15 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
   const firstIdea = messages.find(m => m.isUser)?.text || '';
 
   return (
-    <div className="flex h-full w-full bg-[#FAFAFA]">
+    <div className="flex h-full w-full bg-surface-sunken">
       {/* Left Sidebar - Insights Panel */}
-      <div className="w-56 lg:w-64 bg-white border-r border-gray-200 overflow-y-auto shrink-0 p-4 hidden md:block">
+      <div className="w-56 lg:w-64 bg-surface-card border-r border-border overflow-y-auto shrink-0 p-4 hidden md:block">
         {/* 아이디어 요약 */}
         {firstIdea && (
           <div className="mb-6">
-            <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Idea Summary</h4>
-            <div className="p-3 bg-gray-50 rounded border border-gray-100">
-              <p className="text-xs text-gray-700 leading-relaxed break-keep line-clamp-4">
+            <h4 className="text-[10px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">Idea Summary</h4>
+            <div className="p-4 bg-surface-sunken rounded-xl border border-border-subtle">
+              <p className="text-xs text-txt-secondary leading-relaxed break-keep line-clamp-4">
                 {firstIdea}
               </p>
             </div>
@@ -758,11 +865,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
         {metrics && (
           <div className="space-y-5">
             <div>
-              <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Strengths</h4>
+              <h4 className="text-[10px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">Strengths</h4>
               <div className="space-y-2">
-                {metrics.keyStrengths.map((str, i) => (
-                  <div key={i} className="flex gap-2 text-xs text-gray-700">
-                    <Check size={12} className="text-green-500 shrink-0 mt-0.5" />
+                {(metrics.keyStrengths || []).map((str, i) => (
+                  <div key={i} className="flex gap-2 text-xs text-txt-secondary">
+                    <Check size={12} className="text-status-success-text shrink-0 mt-0.5" />
                     <span className="leading-relaxed break-keep">{str}</span>
                   </div>
                 ))}
@@ -770,11 +877,11 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
             </div>
 
             <div>
-              <h4 className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest mb-2">Risks</h4>
+              <h4 className="text-[10px] font-bold font-mono text-txt-tertiary uppercase tracking-widest mb-2">Risks</h4>
               <div className="space-y-2">
-                {metrics.keyRisks.map((risk, i) => (
-                  <div key={i} className="flex gap-2 text-xs text-gray-700">
-                    <AlertTriangle size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                {(metrics.keyRisks || []).map((risk, i) => (
+                  <div key={i} className="flex gap-2 text-xs text-txt-secondary">
+                    <AlertTriangle size={12} className="text-status-warning-text shrink-0 mt-0.5" />
                     <span className="leading-relaxed break-keep">{risk}</span>
                   </div>
                 ))}
@@ -789,45 +896,212 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col h-full relative min-w-0">
-        {/* Session Header */}
-        <div className="flex items-center justify-center gap-2 py-3 text-[10px] border-b border-gray-100 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
-          <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${
-            level === ValidationLevel.SKETCH ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
-            level === ValidationLevel.DEFENSE ? 'bg-red-50 border-red-200 text-red-700' :
-            'bg-white border-gray-200 text-gray-700'
-          }`}>
-            {level === ValidationLevel.SKETCH ? <Zap size={10}/> : level === ValidationLevel.DEFENSE ? <Sword size={10}/> : <Layers size={10}/>}
-            <span className="font-bold font-mono">
-              {level === ValidationLevel.SKETCH ? 'Lv.1' : level === ValidationLevel.DEFENSE ? 'Lv.3' : 'Lv.2'}
-            </span>
-          </div>
-          <div className="flex items-center gap-1 text-gray-400">
-            {personas.map((pId, idx) => {
-              const preset = PERSONA_PRESETS.find(p => p.id === pId);
-              return (
-                <span key={pId} className="flex items-center gap-1">
-                  {idx > 0 && <span>·</span>}
-                  <span className="text-gray-600">{preset?.nameKo}</span>
-                </span>
-              );
-            })}
-          </div>
-          {onBack && (
+        {/* Session Header - 일반 모드에서만 표시 */}
+        {!isGovernmentMode && (
+          <div className="flex items-center justify-center gap-2 py-3 text-[10px] border-b border-border-subtle bg-surface-card/50 backdrop-blur-sm sticky top-0 z-20">
+            <div className={`flex items-center gap-1.5 px-2 py-1 rounded border ${
+              level === ValidationLevel.SKETCH ? 'bg-surface-sunken border-border text-txt-secondary' :
+              level === ValidationLevel.DEFENSE ? 'bg-surface-sunken border-border text-txt-secondary' :
+              'bg-surface-card border-border text-txt-secondary'
+            }`}>
+              {level === ValidationLevel.SKETCH ? <Zap size={10}/> : level === ValidationLevel.DEFENSE ? <Sword size={10}/> : <Layers size={10}/>}
+              <span className="font-bold font-mono">
+                {level === ValidationLevel.SKETCH ? 'Lv.1' : level === ValidationLevel.DEFENSE ? 'Lv.3' : 'Lv.2'}
+              </span>
+            </div>
+            <div className="flex items-center gap-1 text-txt-tertiary">
+              {personas.map((pId, idx) => {
+                const preset = PERSONA_PRESETS.find(p => p.id === pId);
+                return (
+                  <span key={pId} className="flex items-center gap-1">
+                    {idx > 0 && <span>·</span>}
+                    <span className="text-txt-secondary">{preset?.nameKo}</span>
+                  </span>
+                );
+              })}
+            </div>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="ml-2 px-2 py-1 text-txt-tertiary hover:text-txt-primary hover:bg-surface-sunken rounded transition-colors font-medium"
+              >
+                변경
+              </button>
+            )}
             <button
-              onClick={onBack}
-              className="ml-2 px-2 py-1 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors font-medium"
+              onClick={() => tutorial?.resetTutorial()}
+              className="p-1.5 text-txt-tertiary hover:text-txt-primary hover:bg-surface-sunken rounded transition-colors"
+              title="튜토리얼 보기"
             >
-              변경
+              <HelpCircle size={14} />
             </button>
-          )}
-          <button
-            onClick={() => tutorial?.resetTutorial()}
-            className="p-1.5 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded transition-colors"
-            title="튜토리얼 보기"
-          >
-            <HelpCircle size={14} />
-          </button>
-        </div>
+          </div>
+        )}
+
+        {/* 정부지원사업 모드 헤더 - 데스크탑 전용 */}
+        {isGovernmentMode && (
+          <div className="hidden md:block bg-surface-sunken border-b border-border p-4">
+            {/* 프로그램 뱃지 + 진행률 */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-4 py-2 bg-surface-inverse text-txt-inverse text-sm font-bold rounded-full shadow-md">
+                  <Building2 size={16} />
+                  <span>{programName}</span>
+                </div>
+                <span className="text-xs text-txt-primary font-medium hidden sm:inline">맞춤 검증 모드</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5 text-[10px] text-txt-tertiary">
+                  <span>진행률</span>
+                  <span className="font-bold text-txt-primary">{sectionProgress}%</span>
+                </div>
+                <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-surface-inverse rounded-full transition-all duration-500"
+                    style={{ width: `${sectionProgress}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* 섹션 탭 */}
+            <div className="flex gap-1 mb-3 overflow-x-auto pb-1 scrollbar-hide">
+              {governmentSections.map((section, idx) => {
+                const isActive = idx === currentSectionIndex;
+                const isCompleted = idx < currentSectionIndex;
+                return (
+                  <button
+                    key={section.title}
+                    onClick={() => setCurrentSectionIndex(idx)}
+                    className={`flex-shrink-0 px-3 py-2.5 min-h-[44px] rounded-lg text-xs font-medium transition-all focus:outline-none focus:ring-2 focus:ring-border-strong focus:ring-offset-1 ${
+                      isActive
+                        ? 'bg-surface-inverse text-txt-inverse shadow-sm'
+                        : isCompleted
+                        ? 'bg-surface-sunken text-txt-secondary border border-border'
+                        : 'bg-surface-card/70 text-txt-tertiary border border-border hover:bg-surface-card'
+                    }`}
+                  >
+                    <span className="flex items-center gap-1.5">
+                      {isCompleted ? (
+                        <Check size={12} />
+                      ) : (
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] font-bold ${
+                          isActive ? 'bg-white/20' : 'bg-border'
+                        }`}>
+                          {idx + 1}
+                        </span>
+                      )}
+                      {section.title}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* 현재 섹션 상세 - 질문 가이드 */}
+            {currentSection && (
+              <div className="bg-surface-card rounded-lg border border-border p-3">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-txt-primary">
+                      📋 {currentSection.title} 검토 중
+                    </span>
+                    <span className="text-[10px] text-txt-tertiary">
+                      ({currentSectionIndex + 1}/{governmentSections.length})
+                    </span>
+                  </div>
+                  {currentSectionIndex < governmentSections.length - 1 && (
+                    <button
+                      onClick={() => advanceToNextSection()}
+                      className="text-[10px] text-txt-primary hover:text-txt-primary font-medium flex items-center gap-1 px-2 py-1 rounded focus:outline-none focus:ring-2 focus:ring-border-strong"
+                    >
+                      다음 섹션으로 <ArrowRight size={10} />
+                    </button>
+                  )}
+                </div>
+
+                {/* 평가기준 태그 - 최대 3개 표시 */}
+                <div className="flex flex-wrap gap-1.5 mb-3">
+                  {currentSection.criteria.slice(0, 3).map((crit, i) => (
+                    <span key={i} className="px-2.5 py-1 bg-surface-sunken text-txt-secondary text-[10px] rounded-full border border-border">
+                      {crit}
+                    </span>
+                  ))}
+                  {currentSection.criteria.length > 3 && (
+                    <span className="px-2 py-1 text-[10px] text-txt-tertiary">
+                      +{currentSection.criteria.length - 3}개
+                    </span>
+                  )}
+                </div>
+
+                {/* 가이드 질문 */}
+                {currentSection.questions && currentSection.questions.length > 0 && (
+                  <div className="mt-2 p-3 bg-surface-sunken rounded-lg border border-border-subtle">
+                    <p className="text-[10px] text-txt-tertiary mb-1.5">💡 이 섹션에서 답해야 할 질문:</p>
+                    <p className="text-xs text-txt-secondary leading-relaxed">
+                      {currentSection.questions[0]}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 모바일용 정부지원사업 축소 헤더 */}
+        {isGovernmentMode && currentSection && (
+          <div className="md:hidden bg-surface-sunken border-b border-border">
+            <div className="px-4 py-2">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 bg-surface-inverse rounded-full flex items-center justify-center">
+                    <span className="text-txt-inverse text-[10px] font-bold">{currentSectionIndex + 1}</span>
+                  </div>
+                  <span className="text-xs font-bold text-txt-primary">
+                    {currentSection.title}
+                  </span>
+                  <span className="text-[10px] text-txt-tertiary">
+                    ({currentSectionIndex + 1}/{governmentSections.length})
+                  </span>
+                </div>
+                <span className="text-[10px] font-medium text-txt-primary">
+                  {sectionProgress}% 완료
+                </span>
+              </div>
+              <div className="w-full h-1 bg-border rounded-full mt-2">
+                <div
+                  className="h-full bg-surface-inverse rounded-full transition-all duration-300"
+                  style={{ width: `${sectionProgress}%` }}
+                />
+              </div>
+            </div>
+            {/* 모바일 가이드 질문 영역 */}
+            {currentSection.questions && currentSection.questions.length > 0 && (
+              <div className="px-4 py-2 bg-surface-card/50 border-t border-border">
+                <div className="flex items-start gap-2">
+                  <span className="text-txt-tertiary text-sm">💡</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] text-txt-tertiary mb-0.5">이번 섹션에서 답해야 할 질문</p>
+                    <p className="text-xs text-txt-secondary leading-relaxed">
+                      {currentSection.questions[0]}
+                    </p>
+                  </div>
+                </div>
+                {/* 평가기준 태그 */}
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {currentSection.criteria.slice(0, 2).map((crit, i) => (
+                    <span key={i} className="px-2 py-0.5 bg-surface-sunken text-txt-secondary text-[10px] rounded-full border border-border">
+                      {crit}
+                    </span>
+                  ))}
+                  {currentSection.criteria.length > 2 && (
+                    <span className="text-[10px] text-txt-tertiary">+{currentSection.criteria.length - 2}</span>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div ref={scrollRef} className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 scrollbar-hide">
           <MessageList
@@ -845,21 +1119,21 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
 
         {/* Token Limit Warning - always shown when limit reached */}
         {isLimitReached && (
-          <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
+          <div className="p-4 md:p-6 bg-surface-card border-t border-border shrink-0 z-10">
             <div className="max-w-4xl mx-auto relative">
-              <div className="w-full bg-gray-50 border border-gray-200 rounded p-4 flex items-center justify-between">
+              <div className="w-full bg-surface-sunken border border-border rounded p-4 flex items-center justify-between">
                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center text-gray-500">
+                    <div className="w-8 h-8 bg-border rounded flex items-center justify-center text-txt-tertiary">
                         <Lock size={14} />
                     </div>
                     <div className="text-sm">
-                        <span className="font-bold text-gray-900 block">대화 턴 소진</span>
-                        <span className="text-xs text-gray-500">심도 있는 검증을 위해 토큰을 사용하세요.</span>
+                        <span className="font-bold text-txt-primary block">대화 턴 소진</span>
+                        <span className="text-xs text-txt-tertiary">심도 있는 검증을 위해 토큰을 사용하세요.</span>
                     </div>
                  </div>
                  <button
                     onClick={consumeTokenAndContinue}
-                    className="bg-black text-white px-4 py-2 rounded text-xs font-bold hover:bg-gray-800 transition-colors"
+                    className="bg-surface-inverse text-txt-inverse px-4 py-2 rounded-lg text-xs font-bold hover:opacity-90 transition-colors"
                  >
                     토큰 1개 사용 (잔여: {tokens})
                  </button>
@@ -880,19 +1154,27 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
             showInputMode={showInputMode}
             onShowInputMode={() => setShowInputMode(true)}
             turnCount={turnCount}
+            placeholder={
+              isGovernmentMode && currentSection?.questions?.[0]
+                ? `💡 ${currentSection.questions[0].slice(0, 60)}${currentSection.questions[0].length > 60 ? '...' : ''}`
+                : "아이디어나 답변을 입력하세요..."
+            }
+            isGovernmentMode={isGovernmentMode}
+            showQuickActions={!metrics}
+            currentSectionTitle={currentSection?.title}
           />
         )}
 
         {/* Auto-complete when limit reached */}
         {isLimitReached && metrics && (
-          <div className="p-4 md:p-6 bg-white border-t border-gray-200 shrink-0 z-10">
+          <div className="p-4 md:p-6 bg-surface-card border-t border-border shrink-0 z-10">
             <div className="max-w-4xl mx-auto">
-              <div className="bg-black text-white rounded p-5 text-center">
+              <div className="bg-surface-inverse text-txt-inverse rounded p-5 text-center">
                 <div className="text-2xl font-black mb-2">{metrics.score}점</div>
-                <p className="text-sm text-gray-300 mb-4">10턴 검증이 완료되었습니다</p>
+                <p className="text-sm text-txt-disabled mb-4">10턴 검증이 완료되었습니다</p>
                 <button
                   onClick={handleFinish}
-                  className="px-6 py-3 bg-white text-black text-sm font-bold rounded hover:bg-gray-100 transition-colors flex items-center gap-2 mx-auto"
+                  className="px-4 py-3 bg-surface-card text-txt-primary text-sm font-bold rounded-lg hover:bg-surface-sunken transition-colors flex items-center gap-2 mx-auto"
                 >
                   결과 확인하기
                   <ArrowRight size={16} />
@@ -904,34 +1186,96 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({ onComplete, level, person
       </div>
 
       {/* Right Sidebar - Analytics Panel */}
-      <div className="w-56 lg:w-64 bg-white border-l border-gray-200 overflow-y-auto shrink-0 p-4 hidden md:block" data-tutorial="chat-sidebar">
+      <div className="w-56 lg:w-64 bg-surface-card border-l border-border overflow-y-auto shrink-0 p-4 hidden md:block" data-tutorial="chat-sidebar">
+        {isGovernmentMode ? (
+          <>
+            {/* 정부지원사업 평가항목 */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2">
+                  <Building2 size={14} className="text-txt-primary" />
+                  <h4 className="text-xs font-bold text-txt-primary">{programName} 평가항목</h4>
+                </div>
+                <span className="text-[10px] text-txt-tertiary">
+                  {currentSectionIndex}/{governmentSections.length} 완료
+                </span>
+              </div>
+              {/* 진행률 바 */}
+              <div className="h-1.5 bg-surface-sunken rounded-full overflow-hidden mb-4">
+                <div
+                  className="h-full bg-surface-inverse transition-all duration-500"
+                  style={{ width: `${governmentSections.length > 0 ? (currentSectionIndex / governmentSections.length) * 100 : 0}%` }}
+                />
+              </div>
+              <div className="space-y-2">
+                {governmentSections.map((section, idx) => {
+                  const isCompleted = idx < currentSectionIndex;
+                  const isCurrent = idx === currentSectionIndex;
 
-         {/* Live Status */}
-         <div className="flex items-center justify-between mb-5">
-             <div className="flex items-center gap-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                 <span className="text-[9px] font-bold font-mono text-gray-400 uppercase tracking-widest">Live Analysis</span>
-             </div>
-         </div>
+                  return (
+                    <div
+                      key={section.title}
+                      className={`flex items-center gap-2 p-2.5 rounded-lg transition-all ${
+                        isCurrent ? 'bg-surface-sunken border border-border-strong' :
+                        isCompleted ? 'bg-surface-sunken border border-border' :
+                        'bg-surface-sunken border border-border-subtle'
+                      }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0 ${
+                        isCompleted ? 'bg-status-success-text text-txt-inverse' :
+                        isCurrent ? 'bg-surface-inverse text-txt-inverse' :
+                        'bg-border text-txt-tertiary'
+                      }`}>
+                        {isCompleted ? <Check size={12} /> : idx + 1}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className={`text-xs font-medium truncate ${
+                          isCompleted ? 'text-txt-secondary' :
+                          isCurrent ? 'text-txt-primary' :
+                          'text-txt-tertiary'
+                        }`}>
+                          {section.title}
+                        </p>
+                        <p className="text-[10px] text-txt-tertiary">
+                          {section.questionCount}개 • {section.weight}점
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Live Status */}
+            <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 rounded-full bg-status-success-text animate-pulse"></div>
+                <span className="text-[10px] font-bold font-mono text-txt-tertiary uppercase tracking-widest">Live Analysis</span>
+              </div>
+            </div>
 
-         {/* Progressive Scorecard Panel */}
-         <ScorecardPanel
-           scorecard={scorecard}
-           recentUpdates={recentUpdates}
-           targetLevel={level === ValidationLevel.SKETCH ? 'sketch' : level === ValidationLevel.DEFENSE ? 'defense' : 'mvp'}
-           className="mb-6"
-         />
+            {/* Progressive Scorecard Panel */}
+            <ScorecardPanel
+              scorecard={scorecard}
+              recentUpdates={recentUpdates}
+              targetLevel={level === ValidationLevel.SKETCH ? 'sketch' : level === ValidationLevel.DEFENSE ? 'defense' : 'mvp'}
+              className="mb-6"
+            />
 
-         {/* 검증 완료 버튼 */}
-         {scorecard.totalScore > 0 && (
-           <button
-             onClick={handleFinish}
-             className="w-full bg-black text-white py-2.5 rounded text-xs font-bold hover:bg-gray-800 transition-colors flex items-center justify-center gap-2"
-           >
-             전체 리포트 보기
-             <ArrowRight size={14} />
-           </button>
-         )}
+            {/* 검증 완료 버튼 */}
+            {scorecard.totalScore > 0 && (
+              <button
+                onClick={handleFinish}
+                className="w-full bg-surface-inverse text-txt-inverse py-2.5 rounded text-xs font-bold hover:opacity-90 transition-colors flex items-center justify-center gap-2"
+              >
+                전체 리포트 보기
+                <ArrowRight size={14} />
+              </button>
+            )}
+          </>
+        )}
       </div>
 
       {/* Reflection Modal */}

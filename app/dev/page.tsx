@@ -97,7 +97,7 @@ export default function DevPage() {
           component: (
             <div className="space-y-6">
               <div>
-                <p className="text-xs text-gray-500 mb-2">Step 1: Validation</p>
+                <p className="text-xs text-txt-tertiary mb-2">Step 1: Validation</p>
                 <WorkflowStepper
                   currentStep="validation"
                   completedSteps={[]}
@@ -105,7 +105,7 @@ export default function DevPage() {
                 />
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-2">Step 2: PRD (validation complete)</p>
+                <p className="text-xs text-txt-tertiary mb-2">Step 2: PRD (validation complete)</p>
                 <WorkflowStepper
                   currentStep="prd"
                   completedSteps={['validation']}
@@ -113,7 +113,7 @@ export default function DevPage() {
                 />
               </div>
               <div>
-                <p className="text-xs text-gray-500 mb-2">Step 4: Export (all complete)</p>
+                <p className="text-xs text-txt-tertiary mb-2">Step 4: Export (all complete)</p>
                 <WorkflowStepper
                   currentStep="export"
                   completedSteps={['validation', 'prd', 'business-plan']}
@@ -177,7 +177,7 @@ export default function DevPage() {
               <button
                 data-testid="open-program-modal-btn"
                 onClick={() => setShowProgramModal(true)}
-                className="px-4 py-2 bg-black text-white rounded-sm hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 bg-surface-inverse text-txt-inverse rounded-sm hover:opacity-90 transition-colors"
               >
                 프로그램 선택 모달 열기
               </button>
@@ -219,8 +219,8 @@ export default function DevPage() {
           name: 'Card (with title)',
           description: '제목이 있는 카드',
           component: (
-            <Card title="Card Title" action={<button className="text-xs text-blue-600">Action</button>}>
-              <p className="text-sm text-gray-600">Card content goes here</p>
+            <Card title="Card Title" action={<button className="text-xs text-txt-secondary">Action</button>}>
+              <p className="text-sm text-txt-secondary">Card content goes here</p>
             </Card>
           ),
         },
@@ -235,9 +235,9 @@ export default function DevPage() {
           name: 'SelectionScreen',
           description: '레벨 선택 화면 - 실제 확인은 메인 페이지에서',
           component: (
-            <div className="p-8 bg-gray-100 rounded-lg text-center">
-              <p className="text-gray-600 mb-2">SelectionScreen은 메인 플로우에서 확인하세요</p>
-              <Link href="/" className="text-blue-600 underline">메인 페이지로 이동 →</Link>
+            <div className="p-8 bg-surface-sunken rounded-lg text-center">
+              <p className="text-txt-secondary mb-2">SelectionScreen은 메인 플로우에서 확인하세요</p>
+              <Link href="/" className="text-txt-secondary underline">메인 페이지로 이동 →</Link>
             </div>
           ),
           fullWidth: true,
@@ -247,9 +247,9 @@ export default function DevPage() {
           name: 'OnboardingScreen',
           description: '온보딩 화면 - 실제 확인은 메인 페이지에서',
           component: (
-            <div className="p-8 bg-gray-100 rounded-lg text-center">
-              <p className="text-gray-600 mb-2">OnboardingScreen은 메인 플로우에서 확인하세요</p>
-              <Link href="/" className="text-blue-600 underline">메인 페이지로 이동 →</Link>
+            <div className="p-8 bg-surface-sunken rounded-lg text-center">
+              <p className="text-txt-secondary mb-2">OnboardingScreen은 메인 플로우에서 확인하세요</p>
+              <Link href="/" className="text-txt-secondary underline">메인 페이지로 이동 →</Link>
             </div>
           ),
           fullWidth: true,
@@ -266,19 +266,19 @@ export default function DevPage() {
   return (
     <div className="min-h-screen bg-[#FAFAFA] bg-grid-engineering">
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-white border-b border-gray-200 px-6 py-4">
+      <header className="sticky top-0 z-40 bg-surface-card border-b border-border px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div>
-            <h1 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-              <span className="bg-black text-white px-2 py-0.5 rounded-sm text-sm font-mono">DEV</span>
+            <h1 className="text-xl font-bold text-txt-primary flex items-center gap-2">
+              <span className="bg-surface-inverse text-txt-inverse px-2 py-0.5 rounded-sm text-sm font-mono">DEV</span>
               Component Showcase
             </h1>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-txt-tertiary mt-1">
               개발/발표용 컴포넌트 미리보기 • {sections.reduce((acc, s) => acc + s.items.length, 0)}개 컴포넌트
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-mono text-green-600 bg-green-50 px-2 py-1 rounded-full border border-green-200">
+            <span className="text-[10px] font-mono text-status-success-text bg-status-success-bg px-2 py-1 rounded-full border border-border">
               localhost:3000/dev
             </span>
           </div>
@@ -288,20 +288,20 @@ export default function DevPage() {
       {/* Content */}
       <main className="max-w-7xl mx-auto px-6 py-8 space-y-8">
         {sections.map((section) => (
-          <section key={section.id} className="bg-white rounded-sm border border-gray-200 overflow-hidden">
+          <section key={section.id} className="bg-surface-card rounded-sm border border-border overflow-hidden">
             {/* Section Header */}
             <button
               onClick={() => toggleSection(section.id)}
-              className="w-full px-6 py-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              className="w-full px-6 py-4 flex items-center justify-between hover:bg-surface-sunken transition-colors"
             >
               <div className="flex items-center gap-3">
                 {expandedSections.has(section.id) ? (
-                  <ChevronDown size={16} className="text-gray-400" />
+                  <ChevronDown size={16} className="text-txt-tertiary" />
                 ) : (
-                  <ChevronRight size={16} className="text-gray-400" />
+                  <ChevronRight size={16} className="text-txt-tertiary" />
                 )}
-                <h2 className="font-bold text-gray-900">{section.title}</h2>
-                <span className="text-[10px] font-mono text-gray-400 bg-gray-100 px-2 py-0.5 rounded-sm">
+                <h2 className="font-bold text-txt-primary">{section.title}</h2>
+                <span className="text-[10px] font-mono text-txt-tertiary bg-surface-sunken px-2 py-0.5 rounded-sm">
                   {section.items.length} items
                 </span>
               </div>
@@ -309,46 +309,46 @@ export default function DevPage() {
 
             {/* Section Items */}
             {expandedSections.has(section.id) && (
-              <div className="border-t border-gray-100">
+              <div className="border-t border-border-subtle">
                 {section.items.map((item, index) => (
                   <div
                     key={item.id}
-                    className={`${index > 0 ? 'border-t border-gray-100' : ''}`}
+                    className={`${index > 0 ? 'border-t border-border-subtle' : ''}`}
                   >
                     {/* Item Header */}
-                    <div className="px-6 py-3 bg-gray-50 flex items-center justify-between">
+                    <div className="px-6 py-3 bg-surface-sunken flex items-center justify-between">
                       <div>
-                        <h3 className="font-mono text-sm font-bold text-gray-900">{item.name}</h3>
-                        <p className="text-xs text-gray-500">{item.description}</p>
+                        <h3 className="font-mono text-sm font-bold text-txt-primary">{item.name}</h3>
+                        <p className="text-xs text-txt-tertiary">{item.description}</p>
                       </div>
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => copyImportPath(item.name)}
-                          className="p-1.5 hover:bg-gray-200 rounded-sm transition-colors"
+                          className="p-1.5 hover:bg-surface-sunken rounded-sm transition-colors"
                           title="Copy import"
                         >
                           {copiedId === item.name ? (
-                            <Check size={14} className="text-green-600" />
+                            <Check size={14} className="text-status-success-text" />
                           ) : (
-                            <Copy size={14} className="text-gray-400" />
+                            <Copy size={14} className="text-txt-tertiary" />
                           )}
                         </button>
                         <button
                           onClick={() => setFullscreenItem(item.id)}
-                          className="p-1.5 hover:bg-gray-200 rounded-sm transition-colors"
+                          className="p-1.5 hover:bg-surface-sunken rounded-sm transition-colors"
                           title="Fullscreen"
                         >
-                          <Maximize2 size={14} className="text-gray-400" />
+                          <Maximize2 size={14} className="text-txt-tertiary" />
                         </button>
                         <button
                           onClick={() => toggleItem(item.id)}
-                          className="p-1.5 hover:bg-gray-200 rounded-sm transition-colors"
+                          className="p-1.5 hover:bg-surface-sunken rounded-sm transition-colors"
                           title={hiddenItems.has(item.id) ? 'Show' : 'Hide'}
                         >
                           {hiddenItems.has(item.id) ? (
-                            <EyeOff size={14} className="text-gray-400" />
+                            <EyeOff size={14} className="text-txt-tertiary" />
                           ) : (
-                            <Eye size={14} className="text-gray-400" />
+                            <Eye size={14} className="text-txt-tertiary" />
                           )}
                         </button>
                       </div>
@@ -358,7 +358,7 @@ export default function DevPage() {
                     {!hiddenItems.has(item.id) && (
                       <div
                         data-testid={item.id}
-                        className={`p-6 ${item.darkBg ? 'bg-gray-900' : 'bg-white'}`}
+                        className={`p-6 ${item.darkBg ? 'bg-gray-900' : 'bg-surface-card'}`}
                       >
                         <div className={item.fullWidth ? '' : 'max-w-2xl'}>
                           {item.component}
@@ -375,15 +375,15 @@ export default function DevPage() {
 
       {/* Fullscreen Modal */}
       {fullscreenComponent && (
-        <div className="fixed inset-0 z-50 bg-white overflow-auto">
-          <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between">
+        <div className="fixed inset-0 z-50 bg-surface-card overflow-auto">
+          <div className="sticky top-0 bg-surface-card border-b border-border px-6 py-4 flex items-center justify-between">
             <div>
-              <h2 className="font-mono font-bold text-gray-900">{fullscreenComponent.name}</h2>
-              <p className="text-xs text-gray-500">{fullscreenComponent.description}</p>
+              <h2 className="font-mono font-bold text-txt-primary">{fullscreenComponent.name}</h2>
+              <p className="text-xs text-txt-tertiary">{fullscreenComponent.description}</p>
             </div>
             <button
               onClick={() => setFullscreenItem(null)}
-              className="px-4 py-2 bg-black text-white text-sm rounded-sm hover:bg-gray-800"
+              className="px-4 py-2 bg-surface-inverse text-txt-inverse text-sm rounded-sm hover:opacity-90"
             >
               Close
             </button>

@@ -1,21 +1,28 @@
 'use client';
 
 import React from 'react';
-import { WorkflowStep, WORKFLOW_STEPS } from './types';
-import { MessageSquare, FileText, Briefcase, Download, Check, ChevronRight } from 'lucide-react';
+import { WorkflowStep, WorkflowStepConfig, WorkflowMode, FULL_WORKFLOW_STEPS } from './types';
+import { MessageSquare, FileText, Briefcase, Download, Check, ChevronRight, Building2, Users, Layers, CheckCircle, Zap } from 'lucide-react';
 
 interface WorkflowStepperProps {
   currentStep: WorkflowStep;
   completedSteps: WorkflowStep[];
   onStepClick?: (step: WorkflowStep) => void;
   compact?: boolean;
+  steps?: WorkflowStepConfig[];
+  mode?: WorkflowMode;
 }
 
 const STEP_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+  Building2,
   MessageSquare,
   FileText,
   Briefcase,
   Download,
+  Users,
+  Layers,
+  CheckCircle,
+  Zap,
 };
 
 export default function WorkflowStepper({
@@ -23,7 +30,13 @@ export default function WorkflowStepper({
   completedSteps,
   onStepClick,
   compact = false,
+  steps = FULL_WORKFLOW_STEPS,
+  mode,
 }: WorkflowStepperProps) {
+  // 모드에 따른 색상 테마
+  const isQuickMode = mode === 'quick';
+  const primaryColor = isQuickMode ? 'yellow' : 'blue';
+
   const getStepStatus = (stepId: WorkflowStep) => {
     if (completedSteps.includes(stepId)) return 'completed';
     if (currentStep === stepId) return 'current';
@@ -36,9 +49,9 @@ export default function WorkflowStepper({
     // 현재 단계는 클릭 가능
     if (currentStep === stepId) return true;
     // 이전 단계가 완료되었으면 다음 단계도 클릭 가능
-    const stepIndex = WORKFLOW_STEPS.findIndex(s => s.id === stepId);
+    const stepIndex = steps.findIndex(s => s.id === stepId);
     if (stepIndex > 0) {
-      const prevStep = WORKFLOW_STEPS[stepIndex - 1];
+      const prevStep = steps[stepIndex - 1];
       return completedSteps.includes(prevStep.id);
     }
     return false;
@@ -46,8 +59,8 @@ export default function WorkflowStepper({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 rounded-lg">
-        {WORKFLOW_STEPS.map((step, index) => {
+      <div className="flex items-center gap-1 px-3 py-2 bg-surface-sunken rounded-lg">
+        {steps.map((step, index) => {
           const status = getStepStatus(step.id);
           const Icon = STEP_ICONS[step.icon] || MessageSquare;
           const clickable = isStepClickable(step.id);
@@ -59,9 +72,9 @@ export default function WorkflowStepper({
                 disabled={!clickable}
                 className={`
                   flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium transition-all
-                  ${status === 'completed' ? 'bg-green-100 text-green-700' : ''}
-                  ${status === 'current' ? 'bg-blue-100 text-blue-700 ring-2 ring-blue-300' : ''}
-                  ${status === 'upcoming' ? 'bg-gray-100 text-gray-400' : ''}
+                  ${status === 'completed' ? 'bg-status-success-bg text-status-success-text' : ''}
+                  ${status === 'current' ? 'bg-surface-sunken text-txt-primary ring-2 ring-border-strong' : ''}
+                  ${status === 'upcoming' ? 'bg-surface-sunken text-txt-tertiary' : ''}
                   ${clickable ? 'cursor-pointer hover:scale-105' : 'cursor-not-allowed'}
                 `}
                 title={step.titleKo}
@@ -73,8 +86,8 @@ export default function WorkflowStepper({
                 )}
                 <span className="hidden sm:inline">{step.titleKo}</span>
               </button>
-              {index < WORKFLOW_STEPS.length - 1 && (
-                <ChevronRight className="w-3 h-3 text-gray-300 flex-shrink-0" />
+              {index < steps.length - 1 && (
+                <ChevronRight className="w-3 h-3 text-txt-disabled flex-shrink-0" />
               )}
             </React.Fragment>
           );
@@ -85,18 +98,18 @@ export default function WorkflowStepper({
 
   return (
     <div className="w-full">
-      {/* Desktop: Horizontal Stepper */}
+      {/* Desktop: Horizontal Stepper - Stripe 스타일 */}
       <div className="hidden md:flex items-center justify-between relative">
-        {/* Progress Line */}
-        <div className="absolute top-6 left-0 right-0 h-0.5 bg-gray-200 z-0" />
+        {/* Progress Line - 더 두껍고 둥글게 */}
+        <div className="absolute top-6 left-0 right-0 h-1 bg-surface-sunken z-0 rounded-full" />
         <div
-          className="absolute top-6 left-0 h-0.5 bg-blue-500 z-0 transition-all duration-500"
+          className="absolute top-6 left-0 h-1 bg-surface-inverse z-0 rounded-full transition-all duration-700 ease-out"
           style={{
-            width: `${(completedSteps.length / (WORKFLOW_STEPS.length - 1)) * 100}%`,
+            width: `${(completedSteps.length / (steps.length - 1)) * 100}%`,
           }}
         />
 
-        {WORKFLOW_STEPS.map((step, index) => {
+        {steps.map((step, index) => {
           const status = getStepStatus(step.id);
           const Icon = STEP_ICONS[step.icon] || MessageSquare;
           const clickable = isStepClickable(step.id);
@@ -113,17 +126,29 @@ export default function WorkflowStepper({
                 onClick={() => clickable && onStepClick?.(step.id)}
                 disabled={!clickable}
                 className={`
-                  w-12 h-12 rounded-full flex items-center justify-center transition-all duration-300
-                  ${status === 'completed' ? 'bg-green-500 text-white shadow-lg shadow-green-200' : ''}
-                  ${status === 'current' ? 'bg-blue-500 text-white shadow-lg shadow-blue-200 ring-4 ring-blue-100' : ''}
-                  ${status === 'upcoming' ? 'bg-gray-100 text-gray-400 border-2 border-gray-200' : ''}
+                  relative w-14 h-14 rounded-full flex items-center justify-center transition-all duration-300
+                  ${status === 'completed' ? 'bg-surface-inverse text-txt-inverse shadow-lg' : ''}
+                  ${status === 'current' ? 'bg-surface-inverse text-txt-inverse shadow-lg ring-4 ring-border' : ''}
+                  ${status === 'upcoming' ? 'bg-surface-card text-txt-tertiary border-2 border-border' : ''}
                   ${clickable ? 'cursor-pointer hover:scale-110' : 'cursor-not-allowed'}
                 `}
               >
+                {/* 현재 단계 펄스 애니메이션 */}
+                {status === 'current' && (
+                  <span className="absolute inset-0 rounded-full bg-gray-500 animate-ping opacity-30" />
+                )}
                 {status === 'completed' ? (
                   <Check className="w-6 h-6" />
                 ) : (
-                  <Icon className="w-6 h-6" />
+                  <>
+                    <Icon className="w-6 h-6" />
+                    {/* 단계 번호 배지 */}
+                    <span className={`absolute -top-1 -right-1 w-5 h-5 rounded-full text-[10px] font-bold flex items-center justify-center
+                      ${status === 'current' ? 'bg-surface-card text-txt-primary shadow-sm' : 'bg-border text-txt-tertiary'}
+                    `}>
+                      {index + 1}
+                    </span>
+                  </>
                 )}
               </button>
 
@@ -131,14 +156,14 @@ export default function WorkflowStepper({
                 <p
                   className={`
                     text-sm font-semibold
-                    ${status === 'completed' ? 'text-green-600' : ''}
-                    ${status === 'current' ? 'text-blue-600' : ''}
-                    ${status === 'upcoming' ? 'text-gray-400' : ''}
+                    ${status === 'completed' ? 'text-txt-primary' : ''}
+                    ${status === 'current' ? 'text-txt-primary' : ''}
+                    ${status === 'upcoming' ? 'text-txt-tertiary' : ''}
                   `}
                 >
                   {step.titleKo}
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5 max-w-[120px]">
+                <p className="text-xs text-txt-tertiary mt-0.5 max-w-[120px]">
                   {status === 'completed' ? '완료' : status === 'current' ? '진행 중' : '대기'}
                 </p>
               </div>
@@ -149,7 +174,7 @@ export default function WorkflowStepper({
 
       {/* Mobile: Vertical Stepper */}
       <div className="md:hidden space-y-3">
-        {WORKFLOW_STEPS.map((step, index) => {
+        {steps.map((step, index) => {
           const status = getStepStatus(step.id);
           const Icon = STEP_ICONS[step.icon] || MessageSquare;
           const clickable = isStepClickable(step.id);
@@ -161,18 +186,18 @@ export default function WorkflowStepper({
               disabled={!clickable}
               className={`
                 w-full flex items-center gap-4 p-4 rounded-xl transition-all duration-300
-                ${status === 'completed' ? 'bg-green-50 border-2 border-green-200' : ''}
-                ${status === 'current' ? 'bg-blue-50 border-2 border-blue-300 shadow-lg' : ''}
-                ${status === 'upcoming' ? 'bg-gray-50 border-2 border-gray-100' : ''}
+                ${status === 'completed' ? 'bg-status-success-bg border-2 border-border' : ''}
+                ${status === 'current' ? 'bg-surface-sunken border-2 border-border-strong shadow-lg' : ''}
+                ${status === 'upcoming' ? 'bg-surface-sunken border-2 border-border-subtle' : ''}
                 ${clickable ? 'cursor-pointer hover:scale-[1.02]' : 'cursor-not-allowed opacity-60'}
               `}
             >
               <div
                 className={`
                   w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0
-                  ${status === 'completed' ? 'bg-green-500 text-white' : ''}
-                  ${status === 'current' ? 'bg-blue-500 text-white' : ''}
-                  ${status === 'upcoming' ? 'bg-gray-200 text-gray-400' : ''}
+                  ${status === 'completed' ? 'bg-surface-inverse text-txt-inverse' : ''}
+                  ${status === 'current' ? 'bg-surface-inverse text-txt-inverse' : ''}
+                  ${status === 'upcoming' ? 'bg-border text-txt-tertiary' : ''}
                 `}
               >
                 {status === 'completed' ? (
@@ -186,18 +211,18 @@ export default function WorkflowStepper({
                 <p
                   className={`
                     font-semibold
-                    ${status === 'completed' ? 'text-green-700' : ''}
-                    ${status === 'current' ? 'text-blue-700' : ''}
-                    ${status === 'upcoming' ? 'text-gray-400' : ''}
+                    ${status === 'completed' ? 'text-txt-primary' : ''}
+                    ${status === 'current' ? 'text-txt-primary' : ''}
+                    ${status === 'upcoming' ? 'text-txt-tertiary' : ''}
                   `}
                 >
                   Step {index + 1}. {step.titleKo}
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">{step.description}</p>
+                <p className="text-xs text-txt-tertiary mt-0.5">{step.description}</p>
               </div>
 
               {status === 'current' && (
-                <ChevronRight className="w-5 h-5 text-blue-400 flex-shrink-0" />
+                <ChevronRight className="w-5 h-5 text-txt-tertiary flex-shrink-0" />
               )}
             </button>
           );

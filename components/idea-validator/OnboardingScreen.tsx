@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect, memo } from 'react';
-import { ArrowRight, User, Building2, Mail, ShieldCheck, Shield, Lightbulb, Target, Loader2, AlertCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ArrowRight, User, Building2, Mail, ShieldCheck, Shield, Loader2, AlertCircle } from 'lucide-react';
 
 interface OnboardingData {
+  id: string; // UUID - 포트폴리오 저장용
   name: string;
   organization: string;
   email: string;
@@ -16,74 +17,66 @@ interface OnboardingScreenProps {
 
 const SESSION_KEY = 'prd_demo_session';
 
-// Showcase items for marquee
-const showcaseItems = [
-  { type: 'idea', title: 'AI 헬스케어', desc: '개인 맞춤형 건강 관리', tag: 'Validated', color: 'bg-black text-white' },
-  { type: 'prd', title: 'EduTech MVP', desc: '성인 직무 교육 플랫폼', tag: 'PRD Ready', color: 'bg-white border-gray-200 text-gray-900' },
-  { type: 'idea', title: 'Green Delivery', desc: '친환경 배송 솔루션', tag: 'In Review', color: 'bg-emerald-600 text-white' },
-  { type: 'prd', title: 'FinTech App', desc: '간편 송금 서비스', tag: 'PRD Ready', color: 'bg-white border-gray-200 text-gray-900' },
-  { type: 'idea', title: 'Pet Care AI', desc: '반려동물 AI 케어', tag: 'Validated', color: 'bg-gray-900 text-white' },
-  { type: 'prd', title: 'Remote Work', desc: '원격 협업 도구', tag: 'Building', color: 'bg-white border-gray-200 text-gray-900' },
-  { type: 'idea', title: 'Smart Farm', desc: '스마트 농업 솔루션', tag: 'Analyzing', color: 'bg-blue-600 text-white' },
-];
-
-const showcaseColumn1 = [...showcaseItems, ...showcaseItems, ...showcaseItems];
-const showcaseColumn2 = [...[...showcaseItems].reverse(), ...showcaseItems, ...showcaseItems];
-
-// Showcase Card Component
-const ShowcaseCard = memo(({ item }: { item: typeof showcaseItems[0] }) => (
-  <div className={`
-    w-[260px] p-5 rounded shadow-sm border border-gray-200/50 flex flex-col justify-between transition-transform hover:scale-[1.02]
-    ${item.color}
-  `}>
-    <div className="flex justify-between items-start mb-4">
-       <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${item.color.includes('bg-black') || item.color.includes('bg-gray-900') || item.color.includes('bg-emerald') || item.color.includes('bg-blue') ? 'border-white/20 bg-white/10' : 'border-gray-100 bg-gray-50 text-black'}`}>
-          {item.type === 'idea' ? <Lightbulb size={14}/> : <Target size={14}/>}
-       </div>
-       <span className={`text-[9px] font-mono font-bold uppercase border px-1.5 py-0.5 rounded ${item.color.includes('bg-black') || item.color.includes('bg-gray-900') || item.color.includes('bg-emerald') || item.color.includes('bg-blue') ? 'border-white/30' : 'border-gray-200'}`}>
-         {item.tag}
-       </span>
-    </div>
-    <div>
-       <h4 className="font-bold text-base mb-1">{item.title}</h4>
-       <p className={`text-xs ${item.color.includes('bg-black') || item.color.includes('bg-gray-900') || item.color.includes('bg-emerald') || item.color.includes('bg-blue') ? 'text-white/70' : 'text-gray-500'}`}>{item.desc}</p>
-    </div>
-  </div>
-));
-ShowcaseCard.displayName = 'ShowcaseCard';
-
 const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   const [phase, setPhase] = useState<'loading' | 'ready' | 'auto-login'>('loading');
   const [progress, setProgress] = useState(0);
 
-  const [formData, setFormData] = useState<OnboardingData>({
+  const [formData, setFormData] = useState<Omit<OnboardingData, 'id'>>({
     name: '',
     organization: '',
     email: '',
     privacyConsent: false
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof OnboardingData, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof Omit<OnboardingData, 'id'>, string>>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Check for existing session on mount
   useEffect(() => {
-    const savedSession = localStorage.getItem(SESSION_KEY);
-    if (savedSession) {
+    const restoreSession = async () => {
+      const savedSession = localStorage.getItem(SESSION_KEY);
+      if (!savedSession) return;
+
       try {
-        const sessionData = JSON.parse(savedSession) as OnboardingData;
-        if (sessionData.email && sessionData.name) {
-          setPhase('auto-login');
-          // Auto-login after brief delay
-          setTimeout(() => {
-            onComplete(sessionData);
-          }, 800);
+        const sessionData = JSON.parse(savedSession);
+        if (!sessionData.email || !sessionData.name) {
+          localStorage.removeItem(SESSION_KEY);
           return;
         }
+
+        setPhase('auto-login');
+
+        // id가 없으면 이메일로 사용자 조회
+        if (!sessionData.id) {
+          const response = await fetch('/api/users', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: sessionData.name,
+              organization: sessionData.organization || '',
+              email: sessionData.email,
+              privacyConsent: true
+            })
+          });
+          const result = await response.json();
+
+          if (result.success && result.user?.id) {
+            sessionData.id = result.user.id;
+            localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
+          }
+        }
+
+        // Auto-login
+        setTimeout(() => {
+          onComplete(sessionData as OnboardingData);
+        }, 800);
       } catch {
         localStorage.removeItem(SESSION_KEY);
+        setPhase('ready');
       }
-    }
+    };
+
+    restoreSession();
   }, [onComplete]);
 
   // Boot animation
@@ -156,9 +149,23 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
         return;
       }
 
-      // Save session to localStorage
-      localStorage.setItem(SESSION_KEY, JSON.stringify(formData));
-      onComplete(formData);
+      // API 응답에서 user.id 가져오기
+      const userId = result.user?.id;
+      if (!userId) {
+        setErrors({ email: '사용자 ID를 받지 못했습니다.' });
+        setIsSubmitting(false);
+        return;
+      }
+
+      // id를 포함한 완전한 데이터
+      const completeData: OnboardingData = {
+        id: userId,
+        ...formData
+      };
+
+      // Save session to localStorage (id 포함)
+      localStorage.setItem(SESSION_KEY, JSON.stringify(completeData));
+      onComplete(completeData);
     } catch (error) {
       console.error('Onboarding error:', error);
       setErrors({ email: '서버 연결에 실패했습니다.' });
@@ -171,10 +178,10 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   // Auto-login Phase
   if (phase === 'auto-login') {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#FAFAFA] flex flex-col items-center justify-center font-mono">
-        <div className="w-12 h-12 bg-black text-white flex items-center justify-center font-black text-2xl rounded mb-6 animate-pulse">D</div>
-        <div className="text-sm font-medium text-gray-900 mb-2">다시 오신 것을 환영합니다!</div>
-        <div className="text-[10px] text-gray-400 font-medium tracking-widest uppercase flex items-center gap-2">
+      <div className="fixed inset-0 z-50 bg-surface-sunken flex flex-col items-center justify-center font-mono">
+        <div className="w-12 h-12 bg-surface-inverse text-txt-inverse flex items-center justify-center font-black text-2xl rounded mb-6 animate-pulse">D</div>
+        <div className="text-sm font-medium text-txt-primary mb-2">다시 오신 것을 환영합니다!</div>
+        <div className="text-[10px] text-txt-tertiary font-medium tracking-widest uppercase flex items-center gap-2">
            <Loader2 size={12} className="animate-spin" />
            자동 로그인 중...
         </div>
@@ -185,7 +192,7 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
   // Loading Phase (Circular System Boot)
   if (phase === 'loading') {
     return (
-      <div className="fixed inset-0 z-[100] bg-[#FAFAFA] flex flex-col items-center justify-center font-mono">
+      <div className="fixed inset-0 z-50 bg-surface-sunken flex flex-col items-center justify-center font-mono">
         <div className="relative w-24 h-24 flex items-center justify-center mb-8">
           <svg className="absolute inset-0 w-full h-full -rotate-90" viewBox="0 0 100 100">
              <circle cx="50" cy="50" r="45" fill="none" stroke="#E5E7EB" strokeWidth="2" />
@@ -202,43 +209,45 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
           </svg>
           <div className="text-xl font-bold tracking-tighter">{progress}%</div>
         </div>
-        <div className="text-[10px] text-gray-400 font-medium tracking-widest animate-pulse uppercase">
+        <div className="text-[10px] text-txt-tertiary font-medium tracking-widest animate-pulse uppercase">
            Booting Draft Validator...
         </div>
       </div>
     );
   }
 
-  // Main Split Screen Layout
+  // Clean Centered Layout
   return (
-    <div className="fixed inset-0 z-[100] flex h-screen w-screen overflow-hidden bg-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center h-screen w-screen overflow-hidden bg-surface-sunken">
 
-      {/* LEFT: Form Panel */}
-      <div className="w-full lg:w-[480px] xl:w-[520px] flex flex-col justify-between bg-white z-20 shadow-2xl shrink-0 h-full relative border-r border-gray-100">
+      {/* Centered Form Card */}
+      <div className="w-full max-w-md mx-4 bg-surface-card rounded-xl shadow-xl border border-border-subtle overflow-hidden">
 
          {/* Top Branding */}
-         <div className="p-8 md:p-10 animate-slide-up-fade">
-            <div className="flex items-center gap-2 mb-6">
-               <div className="w-8 h-8 bg-black text-white flex items-center justify-center font-black text-lg rounded">D</div>
-               <span className="font-bold text-xl tracking-tight">Draft.</span>
-            </div>
-            <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-50 border border-gray-100 rounded-full">
-               <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-               <span className="text-[10px] font-mono font-bold text-gray-500 uppercase">Validator Ready</span>
+         <div className="p-4 pb-0">
+            <div className="flex items-center justify-between mb-6">
+               <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-surface-inverse text-txt-inverse flex items-center justify-center font-black text-lg rounded">D</div>
+                  <span className="font-bold text-xl tracking-tight">Draft.</span>
+               </div>
+               <div className="inline-flex items-center gap-2 px-3 py-1 bg-surface-sunken border border-border-subtle rounded-full">
+                  <span className="w-2 h-2 rounded-full bg-status-success-text animate-pulse"></span>
+                  <span className="text-[10px] font-mono font-bold text-txt-tertiary uppercase">Ready</span>
+               </div>
             </div>
          </div>
 
-         {/* Center Form */}
-         <div className="px-8 md:px-10 flex flex-col justify-center animate-slide-up-fade" style={{ animationDelay: '0.1s' }}>
-            <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-2 tracking-tight">
-               시작하기 전에
+         {/* Form Content */}
+         <div className="px-6 pb-6">
+            <h1 className="text-2xl font-bold text-txt-primary mb-1 tracking-tight">
+               시작하기
             </h1>
-            <p className="text-gray-500 text-sm mb-8 leading-relaxed">
-               더 나은 검증 경험을 위해 간단한 정보를 입력해주세요.
+            <p className="text-txt-tertiary text-sm mb-6">
+               간단한 정보를 입력하고 아이디어 검증을 시작하세요.
             </p>
 
             {Object.values(errors).some(Boolean) && (
-               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded flex items-center gap-2 text-red-700 text-sm">
+               <div className="mb-4 p-3 bg-status-danger-bg border border-border rounded-lg flex items-center gap-2 text-status-danger-text text-sm">
                   <AlertCircle size={16} />
                   입력 정보를 확인해주세요.
                </div>
@@ -247,8 +256,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
             <form onSubmit={handleSubmit} className="space-y-4">
                {/* Name */}
                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                     <User size={12} /> 이름 <span className="text-red-500">*</span>
+                  <label className="text-xs font-medium text-txt-secondary flex items-center gap-1.5">
+                     <User size={12} /> 이름 <span className="text-status-danger-text">*</span>
                   </label>
                   <input
                      type="text"
@@ -257,16 +266,16 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                        setFormData(prev => ({ ...prev, name: e.target.value }));
                        if (errors.name) setErrors(prev => ({ ...prev, name: undefined }));
                      }}
-                     className={`w-full px-4 py-3 bg-gray-50 border rounded text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 ${errors.name ? 'border-red-300' : 'border-gray-200'}`}
+                     className={`w-full px-4 py-2.5 bg-surface-sunken border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black focus:bg-surface-card transition-all placeholder:text-txt-tertiary ${errors.name ? 'border-status-danger-text' : 'border-border'}`}
                      placeholder="홍길동"
                   />
-                  {errors.name && <p className="text-xs text-red-500">{errors.name}</p>}
+                  {errors.name && <p className="text-xs text-status-danger-text">{errors.name}</p>}
                </div>
 
                {/* Organization */}
                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                     <Building2 size={12} /> 소속 <span className="text-red-500">*</span>
+                  <label className="text-xs font-medium text-txt-secondary flex items-center gap-1.5">
+                     <Building2 size={12} /> 소속 <span className="text-status-danger-text">*</span>
                   </label>
                   <input
                      type="text"
@@ -275,16 +284,16 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                        setFormData(prev => ({ ...prev, organization: e.target.value }));
                        if (errors.organization) setErrors(prev => ({ ...prev, organization: undefined }));
                      }}
-                     className={`w-full px-4 py-3 bg-gray-50 border rounded text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 ${errors.organization ? 'border-red-300' : 'border-gray-200'}`}
+                     className={`w-full px-4 py-2.5 bg-surface-sunken border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black focus:bg-surface-card transition-all placeholder:text-txt-tertiary ${errors.organization ? 'border-status-danger-text' : 'border-border'}`}
                      placeholder="회사명 또는 학교명"
                   />
-                  {errors.organization && <p className="text-xs text-red-500">{errors.organization}</p>}
+                  {errors.organization && <p className="text-xs text-status-danger-text">{errors.organization}</p>}
                </div>
 
                {/* Email */}
                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold font-mono text-gray-400 uppercase tracking-widest flex items-center gap-1.5">
-                     <Mail size={12} /> 이메일 <span className="text-red-500">*</span>
+                  <label className="text-xs font-medium text-txt-secondary flex items-center gap-1.5">
+                     <Mail size={12} /> 이메일 <span className="text-status-danger-text">*</span>
                   </label>
                   <input
                      type="email"
@@ -293,10 +302,10 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                        setFormData(prev => ({ ...prev, email: e.target.value }));
                        if (errors.email) setErrors(prev => ({ ...prev, email: undefined }));
                      }}
-                     className={`w-full px-4 py-3 bg-gray-50 border rounded text-sm font-medium focus:outline-none focus:border-black focus:bg-white transition-all placeholder:text-gray-300 font-mono ${errors.email ? 'border-red-300' : 'border-gray-200'}`}
+                     className={`w-full px-4 py-2.5 bg-surface-sunken border rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-black/5 focus:border-black focus:bg-surface-card transition-all placeholder:text-txt-tertiary ${errors.email ? 'border-status-danger-text' : 'border-border'}`}
                      placeholder="name@company.com"
                   />
-                  {errors.email && <p className="text-xs text-red-500">{errors.email}</p>}
+                  {errors.email && <p className="text-xs text-status-danger-text">{errors.email}</p>}
                </div>
 
                {/* Privacy Consent */}
@@ -314,8 +323,8 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                         />
                         <div className={`w-5 h-5 border-2 rounded transition-all flex items-center justify-center
                            ${formData.privacyConsent
-                             ? 'bg-black border-black'
-                             : `bg-white group-hover:border-gray-400 ${errors.privacyConsent ? 'border-red-300' : 'border-gray-300'}`
+                             ? 'bg-surface-inverse border-surface-inverse'
+                             : `bg-surface-card group-hover:border-txt-tertiary ${errors.privacyConsent ? 'border-status-danger-text' : 'border-border-strong'}`
                            }`}
                         >
                            {formData.privacyConsent && (
@@ -326,30 +335,30 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
                         </div>
                      </div>
                      <div className="flex-1">
-                        <div className="flex items-center gap-1.5 text-sm text-gray-700">
-                           <ShieldCheck size={14} className="text-gray-400" />
-                           <span className="font-medium">개인정보 수집 및 이용 동의</span>
-                           <span className="text-red-500">*</span>
+                        <div className="flex items-center gap-1.5 text-sm text-txt-secondary">
+                           <ShieldCheck size={14} className="text-txt-tertiary" />
+                           <span className="font-medium">개인정보 수집 동의</span>
+                           <span className="text-status-danger-text">*</span>
                         </div>
-                        <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                        <p className="text-[11px] text-txt-tertiary mt-0.5">
                            서비스 제공을 위해 이름, 소속, 이메일을 수집합니다.
                         </p>
                      </div>
                   </label>
-                  {errors.privacyConsent && <p className="mt-2 text-xs text-red-500">{errors.privacyConsent}</p>}
+                  {errors.privacyConsent && <p className="mt-2 text-xs text-status-danger-text">{errors.privacyConsent}</p>}
                </div>
 
                {/* Submit Button */}
                <button
                   type="submit"
                   disabled={!isFormValid || isSubmitting}
-                  className="w-full bg-black text-white py-3.5 rounded text-sm font-bold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 group shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+                  className="w-full bg-surface-inverse text-txt-inverse py-3 rounded-lg text-sm font-semibold hover:bg-gray-800 transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed mt-4"
                >
                   {isSubmitting ? (
                      <Loader2 size={16} className="animate-spin" />
                   ) : (
                      <>
-                        <span className="font-mono uppercase tracking-wide">시작하기</span>
+                        시작하기
                         <ArrowRight size={16} className="group-hover:translate-x-1 transition-transform" />
                      </>
                   )}
@@ -358,47 +367,9 @@ const OnboardingScreen: React.FC<OnboardingScreenProps> = ({ onComplete }) => {
          </div>
 
          {/* Bottom Footer */}
-         <div className="p-8 md:p-10 text-[10px] text-gray-400 font-mono flex justify-between animate-slide-up-fade" style={{ animationDelay: '0.2s' }}>
+         <div className="px-6 py-4 bg-surface-sunken border-t border-border-subtle text-[10px] text-txt-tertiary font-mono flex justify-between">
             <span>© 2026 DRAFT INC.</span>
-            <span className="flex items-center gap-1"><Shield size={10}/> SECURE CONNECTION</span>
-         </div>
-      </div>
-
-      {/* RIGHT: Infinite Vertical Marquee */}
-      <div className="hidden lg:flex flex-1 bg-[#FAFAFA] relative overflow-hidden flex-col justify-center items-center">
-
-         {/* Fade Overlay (Top/Bottom) */}
-         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[#FAFAFA] to-transparent z-10 pointer-events-none"></div>
-         <div className="absolute bottom-0 left-0 w-full h-32 bg-gradient-to-t from-[#FAFAFA] to-transparent z-10 pointer-events-none"></div>
-
-         {/* Marquee Columns Container */}
-         <div className="flex gap-5 h-[120vh] -rotate-6 scale-110 opacity-90">
-
-            {/* Column 1: Moving Up */}
-            <div className="flex flex-col gap-5 animate-marquee-vertical-up">
-               {showcaseColumn1.map((item, idx) => (
-                  <ShowcaseCard key={`col1-${idx}`} item={item} />
-               ))}
-            </div>
-
-            {/* Column 2: Moving Down */}
-            <div className="flex flex-col gap-5 animate-marquee-vertical-down mt-20">
-               {showcaseColumn2.map((item, idx) => (
-                  <ShowcaseCard key={`col2-${idx}`} item={item} />
-               ))}
-            </div>
-         </div>
-
-         {/* Slogan Overlay */}
-         <div className="absolute bottom-12 right-12 text-right z-10 max-w-md">
-            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight leading-tight mb-3">
-               Validate your idea,<br/>
-               <span className="text-gray-400">Build with confidence.</span>
-            </h2>
-            <div className="flex justify-end gap-2">
-               <div className="px-3 py-1 bg-white border border-gray-200 rounded-full text-[10px] font-bold font-mono shadow-sm">AI VALIDATION</div>
-               <div className="px-3 py-1 bg-white border border-gray-200 rounded-full text-[10px] font-bold font-mono shadow-sm">PRD GENERATOR</div>
-            </div>
+            <span className="flex items-center gap-1"><Shield size={10}/> SECURE</span>
          </div>
       </div>
 

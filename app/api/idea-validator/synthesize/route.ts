@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { genAI } from '@/lib/gemini-client';
 import { withRateLimit } from '@/lib/rate-limit';
 import {
   BusinessPlanData,
@@ -12,11 +12,6 @@ import {
   extractAndParseJson,
 } from '@/lib/validations';
 
-const apiKey = process.env.GEMINI_API_KEY;
-if (!apiKey) {
-  console.error('GEMINI_API_KEY is not configured');
-}
-const genAI = new GoogleGenerativeAI(apiKey || '');
 
 // 파싱된 결과 타입 정의
 interface ParsedBusinessPlan {
@@ -127,16 +122,9 @@ export const POST = withRateLimit(async (request: NextRequest) => {
       );
     }
 
-    if (!apiKey) {
-      return NextResponse.json(
-        { success: false, error: 'AI 서비스가 설정되지 않았습니다.' },
-        { status: 503 }
-      );
-    }
-
     // JSON 강제 출력 설정
     const model = genAI.getGenerativeModel({
-      model: 'gemini-2.0-flash',
+      model: 'gemini-2.5-flash',
       generationConfig: {
         responseMimeType: 'application/json',
         temperature: 0.7,
